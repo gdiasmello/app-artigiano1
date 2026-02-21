@@ -1,0 +1,164 @@
+:root {
+    --verde: #008C45;
+    --vermelho: #CD212A;
+    --branco: #FDFBF7;
+    --azul: #2196F3;
+    --cinza-escuro: #333333;
+    --glass: rgba(255, 255, 255, 0.75);
+}
+
+body {
+    background: var(--branco);
+    font-family: 'Inter', -apple-system, sans-serif;
+    margin: 0;
+    padding: 0;
+    color: var(--cinza-escuro);
+    overflow-x: hidden;
+}
+
+/* Efeito de Vidro (Glassmorphism) */
+.glass-card {
+    background: var(--glass);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    border-radius: 25px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+}
+
+/* Tela de Login */
+.login-screen {
+    height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+}
+
+.login-box {
+    width: 85%;
+    max-width: 350px;
+    padding: 40px 25px;
+    text-align: center;
+}
+
+.brand {
+    font-size: 2.2rem;
+    font-weight: 800;
+    margin-bottom: 5px;
+}
+
+.brand span { color: var(--vermelho); }
+
+.subtitle {
+    font-size: 0.9rem;
+    color: #666;
+    margin-bottom: 30px;
+}
+
+.input-group {
+    background: white;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    padding: 12px 15px;
+    margin-bottom: 15px;
+}
+
+.input-group i { color: #aaa; margin-right: 12px; }
+
+.input-group input {
+    border: none;
+    outline: none;
+    width: 100%;
+    font-size: 1rem;
+}
+
+.btn-login {
+    width: 100%;
+    padding: 15px;
+    background: var(--verde);
+    color: white;
+    border: none;
+    border-radius: 12px;
+    font-weight: bold;
+    font-size: 1.1rem;
+    margin-top: 10px;
+    cursor: pointer;
+}
+
+/* Mural de Avisos */
+.mural-header {
+    margin: 15px;
+    padding: 15px;
+    border-left: 6px solid var(--verde);
+}
+
+.tag-feriado {
+    background: var(--vermelho);
+    color: white;
+    padding: 3px 8px;
+    border-radius: 8px;
+    font-size: 0.7rem;
+    font-weight: bold;
+    margin-left: 10px;
+}
+
+.mural-body {
+    display: flex;
+    align-items: center;
+    margin-top: 10px;
+}
+
+.mural-body i { color: var(--verde); margin-right: 12px; font-size: 1.2rem; }
+
+/* Grid do Menu Principal */
+.menu-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+    padding: 15px;
+}
+
+.menu-item {
+    height: 120px;
+    border-radius: 22px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: bold;
+    font-size: 1.1rem;
+    transition: transform 0.2s;
+}
+
+.menu-item:active { transform: scale(0.95); }
+
+.menu-item i { font-size: 2rem; margin-bottom: 10px; }
+
+.verde { background: linear-gradient(135deg, var(--verde), #005a2c); }
+.vermelho { background: linear-gradient(135deg, var(--vermelho), #a01a21); }
+.azul { background: linear-gradient(135deg, var(--azul), #1565C0); }
+.gray { background: #444; }
+
+/* Loader */
+.loader-overlay {
+    position: fixed;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: var(--branco);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 999;
+}
+
+.spin {
+    animation: fa-spin 2s infinite linear;
+    font-size: 3rem;
+    color: var(--vermelho);
+    margin-bottom: 15px;
+}
+
+[v-cloak] { display: none; }

@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="pt-PT">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>PiZZA Master v0.0.52</title>
+    
+    <meta name="theme-color" content="#121212">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="manifest" href="manifest.json">
+
+    <script>
+        window.addEventListener('error', function(e) {
+            var appDiv = document.getElementById('app');
+            if(appDiv) appDiv.style.display = 'none';
+            var erroDiv = document.getElementById('escudo-erro');
+            if(erroDiv) {
+                erroDiv.style.display = 'flex';
+                document.getElementById('msg-erro-critico').innerText = e.message + '\nArquivo: ' + e.filename + '\nLinha: ' + e.lineno;
+            }
+        });
+    </script>
+
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
+
+    <script src="https://cdn.jsdelivr.net/npm/vue@2.6.14/dist/vue.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css">
+
+    <style>
+        :root { --bg-app: #121212; --bg-card: #1E1E1E; --text-main: #FFFFFF; --text-sec: #AAAAAA; --cor-primaria: #FFAB00; }
+        body { background-color: var(--bg-app); color: var(--text-main); font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; margin: 0; padding: 0; overflow-x: hidden; -webkit-tap-highlight-color: transparent; }
+        .container { padding: 20px; max-width: 600px; margin: 0 auto; padding-bottom: 80px; }
+        .card { background-color: var(--bg-card); border-radius: 15px; padding: 20px; margin-bottom: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
+        .btn { width: 100%; padding: 15px; border: none; border-radius: 12px; font-weight: bold; font-size: 1rem; cursor: pointer; transition: transform 0.1s; }
+        .btn:active { transform: scale(0.98); }
+        .fade-enter-active, .fade-leave-active { transition: opacity 0.2s; }
+        .fade-enter, .fade-leave-to { opacity: 0; }
+    </style>
+</head>
+<body>
+
+    <div id="escudo-erro" style="display: none; background: #B71C1C; color: white; height: 100vh; width: 100vw; flex-direction: column; justify-content: center; align-items: center; padding: 20px; box-sizing: border-box; text-align: center; position: absolute; top: 0; left: 0; z-index: 9999;">
+        <i class="fas fa-biohazard" style="font-size: 4rem; margin-bottom: 20px;"></i>
+        <h2 style="margin-top: 0;">Falha Crítica no Código</h2>
+        <p style="font-size: 0.9rem; margin-bottom: 20px;">O aplicativo não conseguiu carregar devido a um erro num ficheiro:</p>
+        <div id="msg-erro-critico" style="background: #111; color: #FF8A80; padding: 15px; border-radius: 8px; font-family: monospace; font-size: 0.8rem; word-wrap: break-word; max-width: 100%; margin-bottom: 20px;"></div>
+        <button onclick="localStorage.clear(); location.reload(true);" style="background: white; color: #B71C1C; border: none; padding: 15px 30px; border-radius: 8px; font-weight: bold; font-size: 1rem; cursor: pointer;">Limpar Cache e Recarregar</button>
+    </div>
+
+    <div id="app">
+        <transition name="fade" mode="out-in">
+            <component :is="viewAtual"></component>
+        </transition>
+    </div>
+
+    <script src="modulos/login.js?v=52"></script>
+    <script src="modulos/dashboard.js?v=52"></script>
+    <script src="modulos/massa.js?v=52"></script>
+    <script src="modulos/sacolao.js?v=52"></script>
+    <script src="modulos/insumos.js?v=52"></script>
+    <script src="modulos/limpeza.js?v=52"></script>
+    <script src="modulos/historico.js?v=52"></script>
+    <script src="modulos/gelo.js?v=52"></script>
+    <script src="modulos/erros.js?v=52"></script> <script src="modulos/ajustes.js?v=52"></script>
+    <script src="modulos/ajustes_perfil.js?v=52"></script>
+    <script src="modulos/ajustes_loja.js?v=52"></script>
+    <script src="modulos/ajustes_equipe.js?v=52"></script>
+    <script src="modulos/ajustes_produtos.js?v=52"></script>
+    <script src="modulos/ajustes_rotas.js?v=52"></script>
+    <script src="modulos/ajustes_checklists.js?v=52"></script> <script src="modulos/ajustes_ajuda.js?v=52"></script>
+    
+    <script src="main.js?v=52"></script>
+
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('sw.js').then(reg => {
+                    console.log('SW registado com sucesso para o modo offline!');
+                }).catch(err => {
+                    console.log('Falha no registo do SW', err);
+                });
+            });
+        }
+    </script>
+</body>
+</html>
