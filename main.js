@@ -1,6 +1,26 @@
-// INÍCIO DO ARQUIVO main.js - v0.0.74
-window.onerror = function(msg, url, line, col, error) { return false; };
+// INÍCIO DO ARQUIVO main.js - v0.0.76
 
+// 🟢 1. CONFIGURAÇÃO DO FIREBASE
+const firebaseConfig = {
+    apiKey: "AIzaSyBL70gtkhjBvC9BiKvz5HBivH07JfRKuo4",
+    authDomain: "artigiano-app.firebaseapp.com",
+    databaseURL: "https://artigiano-app-default-rtdb.firebaseio.com",
+    projectId: "artigiano-app",
+    storageBucket: "artigiano-app.firebasestorage.app",
+    messagingSenderId: "212218495726",
+    appId: "1:212218495726:web:dd6fec7a4a8c7ad572a9ff"
+};
+
+// Inicializa a Nuvem apenas se ainda não estiver inicializada
+if (!firebase.apps.length) {
+    firebase.initializeApp(firebaseConfig);
+}
+
+// Prepara a variável do banco de dados (que usaremos nos próximos passos)
+const db = firebase.firestore();
+
+// 🛡️ ESCUDO ANTI-ERRO
+window.onerror = function(msg, url, line, col, error) { return false; };
 Vue.config.errorHandler = function (err, vm, info) {
     console.error(err);
     const erroDiv = document.getElementById('escudo-erro');
@@ -48,8 +68,6 @@ const app = new Vue({
         ],
         tarefasConcluidas: [], 
         historicoGlobais: [],
-        
-        // 🟢 NOVO BANCO DE DADOS: SUGESTÕES E ERROS
         feedbacks: []
     },
     methods: {
@@ -161,7 +179,6 @@ const app = new Vue({
         },
 
         salvarMemoriaLocal() {
-            // 🟢 Inclui os feedbacks no salvamento
             const dados = { metas: this.metas, avisos: this.avisos, rotasSalvas: this.rotasSalvas, equipe: this.equipe, historicoGlobais: this.historicoGlobais, estoqueMassasHoje: this.estoqueMassasHoje, dataEstoqueMassas: this.dataEstoqueMassas, carrinhoInsumos: this.carrinhoInsumos, carrinhoSacolao: this.carrinhoSacolao, bancoProdutos: this.bancoProdutos, bancoChecklists: this.bancoChecklists, tarefasConcluidas: this.tarefasConcluidas, feriados: this.feriados, feedbacks: this.feedbacks };
             localStorage.setItem('pizzaMasterOfflineData', JSON.stringify(dados));
         },
@@ -217,7 +234,7 @@ const app = new Vue({
         equipe: { deep: true, handler() { this.salvarMemoriaLocal(); } },
         metas: { deep: true, handler() { this.salvarMemoriaLocal(); } },
         feriados: { deep: true, handler() { this.salvarMemoriaLocal(); } },
-        feedbacks: { deep: true, handler() { this.salvarMemoriaLocal(); } } // Observa mudanças nos feedbacks
+        feedbacks: { deep: true, handler() { this.salvarMemoriaLocal(); } }
     }
 });
 // FIM DO ARQUIVO main.js
