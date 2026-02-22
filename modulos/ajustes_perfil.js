@@ -1,82 +1,100 @@
-// modulos/ajustes_perfil.js - v0.0.23
-
+// INÍCIO DO ARQUIVO modulos/ajustes_perfil.js - v0.0.73
 Vue.component('tela-ajustes-perfil', {
     template: `
     <div class="container animate__animated animate__fadeInRight" v-if="$root.usuario" style="padding-bottom: 100px;">
         
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-            <h2 style="margin: 0; color: #FFF;">👤 Meu Perfil</h2>
-            <button @click="voltar" style="background: none; border: none; color: var(--text-sec); font-size: 1.5rem; cursor: pointer;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <h2 style="margin: 0; color: #00B0FF;">👤 Meu Perfil</h2>
+            <button @click="$root.mudarTela('tela-ajustes')" style="background: none; border: none; color: var(--text-sec); font-size: 1.5rem; cursor: pointer;">
                 <i class="fas fa-arrow-left"></i>
             </button>
         </div>
 
-        <div class="card">
-            <p style="color: var(--text-sec); font-size: 0.85rem; margin-top: 0;">Atualize o seu PIN de acesso e a sua data de aniversário.</p>
+        <div class="card" style="border-top: 3px solid #00B0FF; padding: 25px;">
+            <div style="text-align: center; margin-bottom: 20px;">
+                <i class="fas fa-user-circle" style="font-size: 4.5rem; color: #00B0FF;"></i>
+                <h3 style="margin: 10px 0 0 0; color: white;">{{ $root.usuario.nome }}</h3>
+                <p style="margin: 5px 0 0 0; color: #888;">{{ $root.usuario.cargo }}</p>
+            </div>
+
+            <hr style="border: none; border-top: 1px solid #333; margin: 25px 0;">
+
+            <h4 style="color: #82B1FF; margin-top: 0;"><i class="fab fa-whatsapp" style="color: #00E676;"></i> Mensagens Automáticas</h4>
+            <p style="font-size: 0.8rem; color: #AAA; margin-bottom: 15px; line-height: 1.4;">
+                O sistema já diz "Bom dia / Boa tarde / Boa noite!" sozinho de acordo com a hora. Escreva abaixo a sua saudação e despedida.
+            </p>
+
+            <label class="label-ia">Sua Saudação</label>
+            <input type="text" v-model="prefsLocal.saudacaoZap" placeholder="Ex: Aqui é o Gabriel da pizzaria." class="input-dark" style="margin-bottom: 15px;" />
+
+            <label class="label-ia">Sua Despedida</label>
+            <input type="text" v-model="prefsLocal.despedidaZap" placeholder="Ex: Obrigado!" class="input-dark" style="margin-bottom: 25px;" />
+
+
+            <hr style="border: none; border-top: 1px solid #333; margin: 25px 0;">
+
+            <h4 style="color: #82B1FF; margin-top: 0;"><i class="fas fa-sliders-h"></i> Preferências do Aparelho</h4>
             
-            <label style="color:#CCC; font-size:0.8rem;">Como gosta de ser chamado?</label>
-            <input type="text" v-model="meuPerfil.nome" style="width: 100%; padding: 12px; background: #2C2C2C; border: none; border-radius: 5px; color: white; margin-bottom:15px; box-sizing: border-box;">
+            <label style="display: flex; justify-content: space-between; align-items: center; color: white; background: #222; padding: 15px; border-radius: 8px; margin-bottom: 10px; border: 1px solid #333;">
+                <span><i class="fas fa-fingerprint" style="color: #00B0FF; margin-right: 10px;"></i> Acesso Biométrico</span>
+                <input type="checkbox" v-model="prefsLocal.biometriaAtiva" style="transform: scale(1.3);">
+            </label>
 
-            <label style="color:#CCC; font-size:0.8rem;">Novo PIN de Acesso (4 dígitos)</label>
-            <input type="number" v-model="meuPerfil.pin" style="width: 100%; padding: 12px; background: #2C2C2C; border: none; border-radius: 5px; color: white; margin-bottom:15px; box-sizing: border-box;">
+            <label style="display: flex; justify-content: space-between; align-items: center; color: white; background: #222; padding: 15px; border-radius: 8px; margin-bottom: 25px; border: 1px solid #333;">
+                <span><i class="fas fa-mobile-alt" style="color: #FFAB00; margin-right: 10px;"></i> Vibração ao Tocar</span>
+                <input type="checkbox" v-model="prefsLocal.vibracao" style="transform: scale(1.3);">
+            </label>
 
-            <label style="color:#CCC; font-size:0.8rem;">Data de Aniversário 🎂</label>
-            <input type="date" v-model="meuPerfil.nascimento" style="width: 100%; padding: 12px; background: #2C2C2C; border: none; border-radius: 5px; color: white; margin-bottom:20px; box-sizing: border-box;">
-
-            <button class="btn" style="background: var(--cor-primaria); color: #121212;" @click="salvarMeuPerfil">
-                <i class="fas fa-save"></i> SALVAR ALTERAÇÕES
+            <button @click="salvarPerfil" class="btn" style="background: #00B0FF; color: #121212; font-size: 1.1rem; height: 55px;">
+                SALVAR ALTERAÇÕES
             </button>
         </div>
     </div>
     `,
     data() {
         return {
-            meuPerfil: { nome: '', pin: '', nascimento: '' }
+            prefsLocal: {
+                saudacaoZap: '',
+                despedidaZap: 'Obrigado.',
+                biometriaAtiva: true,
+                vibracao: true
+            }
         };
     },
     mounted() {
-        if (this.$root.usuario) {
-            this.meuPerfil.nome = this.$root.usuario.nome || '';
-            this.meuPerfil.pin = this.$root.usuario.pin || '';
-            this.meuPerfil.nascimento = this.$root.usuario.nascimento || '';
+        // Carrega as preferências do usuário atual para a tela
+        if (this.$root.usuario && this.$root.usuario.preferencias) {
+            this.prefsLocal = JSON.parse(JSON.stringify(this.$root.usuario.preferencias));
+            
+            // Se o usuário for antigo e não tiver essas chaves, criamos agora
+            if (this.prefsLocal.saudacaoZap === undefined) this.prefsLocal.saudacaoZap = '';
+            if (this.prefsLocal.despedidaZap === undefined) this.prefsLocal.despedidaZap = 'Obrigado.';
+        }
+
+        if (!document.getElementById('css-perfil-fix')) {
+            const style = document.createElement('style'); style.id = 'css-perfil-fix';
+            style.innerHTML = `
+                .input-dark { width: 100% !important; padding: 15px !important; background: #2C2C2C !important; border: 1px solid #444 !important; border-radius: 8px !important; color: white !important; box-sizing: border-box !important; font-size: 1rem !important; margin: 0 !important; }
+                .input-dark:focus { outline: none; border-color: #00B0FF !important; }
+                .label-ia { color: #82B1FF; font-size: 0.85rem; font-weight: bold; margin-bottom: 8px; display: block; letter-spacing: 1px; }
+            `;
+            document.head.appendChild(style);
         }
     },
     methods: {
-        voltar() {
+        salvarPerfil() {
             this.$root.vibrar(30);
-            this.$root.mudarTela('tela-ajustes');
-        },
-        salvarMeuPerfil() {
-            this.$root.vibrar(30);
-            if(!this.meuPerfil.nome || !this.meuPerfil.pin) { 
-                this.$root.vibrar([100, 50, 100]); // Erro
-                Swal.fire({ icon: 'error', title: 'Atenção', text: 'Nome e PIN são obrigatórios.', background: '#1E1E1E', color: '#FFF' }); 
-                return; 
-            }
+            // Atualiza o objeto do usuário atual
+            this.$root.usuario.preferencias = { ...this.prefsLocal };
             
-            // Verifica se o PIN mudou para avisar na auditoria
-            let pinMudou = this.$root.usuario.pin !== String(this.meuPerfil.pin);
-
-            this.$root.usuario.nome = this.meuPerfil.nome;
-            this.$root.usuario.pin = String(this.meuPerfil.pin);
-            this.$root.usuario.nascimento = this.meuPerfil.nascimento;
-
-            if(this.$root.equipe) {
-                const index = this.$root.equipe.findIndex(u => u.id === this.$root.usuario.id);
-                if(index !== -1) {
-                    this.$root.equipe[index].nome = this.meuPerfil.nome;
-                    this.$root.equipe[index].pin = this.$root.usuario.pin;
-                    this.$root.equipe[index].nascimento = this.meuPerfil.nascimento;
-                }
+            // Procura o usuário na lista da Equipe e atualiza no Banco de Dados
+            const index = this.$root.equipe.findIndex(u => u.id === this.$root.usuario.id);
+            if (index !== -1) {
+                this.$root.equipe[index].preferencias = { ...this.prefsLocal };
+                this.$root.salvarMemoriaLocal();
+                Swal.fire({ icon: 'success', title: 'Perfil Salvo!', text: 'Suas mensagens do WhatsApp foram atualizadas.', timer: 2000, showConfirmButton: false, background: '#1E1E1E', color: '#FFF' });
             }
-
-            // Regista na Auditoria
-            this.$root.registrarHistorico('Perfil Atualizado', 'Ajustes', pinMudou ? 'PIN de acesso foi alterado.' : 'Apenas dados básicos alterados.');
-
-            this.$root.vibrar([50, 50, 50]); // Sucesso
-            Swal.fire({ icon: 'success', title: 'Salvo!', text: 'Seu perfil foi atualizado com segurança offline.', timer: 1500, showConfirmButton: false, background: '#1E1E1E', color: '#FFF' }).then(() => {
-                this.$root.mudarTela('tela-ajustes');
-            });
         }
     }
 });
+// FIM DO ARQUIVO modulos/ajustes_perfil.js
