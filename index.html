@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>PiZZA Master v0.0.58</title>
+    <title>PiZZA Master v0.0.74</title>
     
     <meta name="theme-color" content="#121212">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -32,22 +32,23 @@
     <style>
         :root { --bg-app: #121212; --bg-card: #1E1E1E; --text-main: #FFFFFF; --text-sec: #AAAAAA; --cor-primaria: #FFAB00; }
         
-        /* 🟢 BLOQUEIO DE REFRESH MAS COM SCROLL LIVRE */
         html, body { 
-            overscroll-behavior-y: contain; /* Impede o pull-to-refresh */
+            overscroll-behavior-y: contain;
             background-color: var(--bg-app); 
             color: var(--text-main); 
             font-family: 'Segoe UI', Roboto, sans-serif; 
             margin: 0; 
             padding: 0;
             height: 100%;
-            overflow-y: auto; /* Permite deslizar o dedo */
+            overflow-y: auto;
             -webkit-overflow-scrolling: touch;
+            -webkit-tap-highlight-color: transparent;
         }
 
         .container { padding: 20px; max-width: 600px; margin: 0 auto; padding-bottom: 100px; box-sizing: border-box; }
         .card { background-color: var(--bg-card); border-radius: 15px; padding: 20px; margin-bottom: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
-        .btn { width: 100%; padding: 15px; border: none; border-radius: 12px; font-weight: bold; font-size: 1rem; cursor: pointer; }
+        .btn { width: 100%; padding: 15px; border: none; border-radius: 12px; font-weight: bold; font-size: 1rem; cursor: pointer; transition: 0.2s; }
+        .btn:active { transform: scale(0.98); }
         .fade-enter-active, .fade-leave-active { transition: opacity 0.2s; }
         .fade-enter, .fade-leave-to { opacity: 0; }
         input, select { font-size: 16px !important; }
@@ -68,24 +69,34 @@
         </transition>
     </div>
 
-    <script src="modulos/login.js?v=58"></script>
-    <script src="modulos/dashboard.js?v=58"></script>
-    <script src="modulos/massa.js?v=58"></script>
-    <script src="modulos/sacolao.js?v=58"></script>
-    <script src="modulos/insumos.js?v=58"></script>
-    <script src="modulos/limpeza.js?v=58"></script>
-    <script src="modulos/historico.js?v=58"></script>
-    <script src="modulos/gelo.js?v=58"></script>
-    <script src="modulos/erros.js?v=58"></script>
-    <script src="modulos/ajustes.js?v=58"></script>
-    <script src="modulos/ajustes_perfil.js?v=58"></script>
-    <script src="modulos/ajustes_loja.js?v=58"></script>
-    <script src="modulos/ajustes_equipe.js?v=58"></script>
-    <script src="modulos/ajustes_produtos.js?v=58"></script>
-    <script src="modulos/ajustes_rotas.js?v=58"></script>
-    <script src="modulos/ajustes_checklists.js?v=58"></script>
-    <script src="modulos/ajustes_ajuda.js?v=58"></script>
+    <script src="modulos/login.js?v=74"></script>
+    <script src="modulos/dashboard.js?v=74"></script>
+    <script src="modulos/massa.js?v=74"></script>
+    <script src="modulos/sacolao.js?v=74"></script>
+    <script src="modulos/insumos.js?v=74"></script>
+    <script src="modulos/limpeza.js?v=74"></script>
+    <script src="modulos/historico.js?v=74"></script>
+    <script src="modulos/gelo.js?v=74"></script>
+    <script src="modulos/erros.js?v=74"></script>
+    <script src="modulos/ajustes.js?v=74"></script>
+    <script src="modulos/ajustes_perfil.js?v=74"></script>
+    <script src="modulos/ajustes_loja.js?v=74"></script>
+    <script src="modulos/ajustes_equipe.js?v=74"></script>
+    <script src="modulos/ajustes_produtos.js?v=74"></script>
+    <script src="modulos/ajustes_rotas.js?v=74"></script>
+    <script src="modulos/ajustes_checklists.js?v=74"></script>
+    <script src="modulos/ajustes_ajuda.js?v=74"></script>
     
-    <script src="main.js?v=58"></script>
+    <script src="modulos/ajustes_sugestoes.js?v=74"></script>
+    
+    <script src="main.js?v=74"></script>
+
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('sw.js').catch(err => {});
+            });
+        }
+    </script>
 </body>
 </html>
