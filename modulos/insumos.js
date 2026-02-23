@@ -1,4 +1,4 @@
-// INÍCIO DO ARQUIVO modulos/insumos.js - v0.0.90
+// INÍCIO DO ARQUIVO modulos/insumos.js - v0.0.96
 Vue.component('tela-insumos', {
     template: `
     <div class="container animate__animated animate__fadeIn" v-if="$root.usuario" style="padding-bottom: 100px;">
@@ -49,21 +49,47 @@ Vue.component('tela-insumos', {
             </div>
         </div>
 
-        <div v-if="temAlgoParaPedir" class="animate__animated animate__fadeInUp" style="position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); width: 90%; max-width: 560px; z-index: 100;">
-            <button @click="fecharPedido" class="btn" style="background: #25D366; color: white; box-shadow: 0 5px 15px rgba(37,211,102,0.4); font-size: 1.1rem; height: 55px;">
-                <i class="fab fa-whatsapp" style="font-size: 1.3rem; margin-right: 8px;"></i> ENVIAR LISTA DA IA
+        <div class="card" style="border-top: 4px solid #FFAB00; padding: 15px; margin-bottom: 30px;">
+            <label style="color: #FFAB00; font-size: 0.9rem; font-weight: bold; margin-bottom: 10px; display: block;">
+                <i class="fas fa-plus-circle"></i> Faltou algum Insumo Extra?
+            </label>
+            
+            <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+                <input type="text" v-model="novoAlgoMais" @keyup.enter="addAlgoMaisInsumo" placeholder="Ex: Rolo de Bobina, Faca..." style="flex: 1; padding: 12px; background: #2C2C2C; border: 1px solid #444; border-radius: 8px; color: white; font-size: 1rem; box-sizing: border-box; outline: none;">
+                <button @click="addAlgoMaisInsumo" class="btn" style="background: #FFAB00; color: #121212; width: 55px; padding: 0; display: flex; align-items: center; justify-content: center;">
+                    <i class="fas fa-plus" style="font-size: 1.2rem;"></i>
+                </button>
+            </div>
+
+            <div v-if="listaAlgoMaisInsumos.length === 0" style="color: #666; font-size: 0.85rem; text-align: center; margin-top: 10px;">
+                Nenhum extra adicionado.
+            </div>
+
+            <div v-for="item in listaAlgoMaisInsumos" :key="item.id" class="animate__animated animate__fadeIn" style="display: flex; justify-content: space-between; align-items: center; background: #222; padding: 12px; border-radius: 8px; margin-bottom: 8px; border: 1px solid #333;">
+                <span style="color: #FFF; font-size: 1rem;">{{ item.texto }}</span>
+                <button @click="rmAlgoMaisInsumo(item.id)" style="background: none; border: none; color: #FF5252; font-size: 1.2rem; cursor: pointer;">
+                    <i class="fas fa-trash-alt"></i>
+                </button>
+            </div>
+        </div>
+
+        <div v-if="temAlgoParaPedir || limpezaSelecionados.length > 0 || listaAlgoMaisInsumos.length > 0 || limpezaAlgoMaisList.length > 0" class="animate__animated animate__fadeInUp" style="position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); width: 90%; max-width: 560px; z-index: 100;">
+            <button @click="fecharPedido" class="btn" style="background: #25D366; color: white; box-shadow: 0 5px 15px rgba(37,211,102,0.4); font-size: 1rem; height: 55px; white-space: nowrap;">
+                <i class="fab fa-whatsapp" style="font-size: 1.3rem; margin-right: 8px;"></i> ENVIAR INSUMOS E LIMPEZA
             </button>
         </div>
 
-        <div v-if="produtosFiltrados.length === 0" style="text-align: center; color: #666; margin-top: 50px;">
-            Nenhum produto cadastrado nos Insumos.
-        </div>
     </div>
     `,
     data() {
         return {
             estoquesLoja: {},
-            obsItens: {}
+            obsItens: {},
+            listaAlgoMaisInsumos: [],
+            novoAlgoMais: '',
+            // Variáveis que vêm da Limpeza via Firebase
+            limpezaSelecionados: [],
+            limpezaAlgoMaisList: []
         };
     },
     computed: {
@@ -78,9 +104,7 @@ Vue.component('tela-insumos', {
         }
     },
     methods: {
-        produtosPorRota(r) { 
-            return this.produtosFiltrados.filter(p => p.local === r).sort((a,b) => a.nome.localeCompare(b.nome)); 
-        },
+        produtosPorRota(r) { return this.produtosFiltrados.filter(p => p.local === r).sort((a,b) => a.nome.localeCompare(b.nome)); },
         precisaPedir(p) {
             let atual = this.estoquesLoja[p.id];
             if (atual === '' || atual === undefined || atual === null) return false;
@@ -89,35 +113,33 @@ Vue.component('tela-insumos', {
         calcPedirFinal(p) {
             let atual = this.estoquesLoja[p.id];
             let falta = p.estoqueIdeal - atual;
-            
-            if (p.apenasNome) {
-                return falta; 
-            } else {
-                return Math.ceil(falta / p.fator);
-            }
+            return p.apenasNome ? falta : Math.ceil(falta / p.fator);
         },
         async addObs(id) {
             this.$root.vibrar(20);
             const { value: text } = await Swal.fire({ 
-                title: 'Observação no item', 
-                input: 'text', 
-                inputValue: this.obsItens[id] || '', 
-                placeholder: 'Ex: Urgente, marca X...', 
-                background: '#1E1E1E', 
-                color: '#FFF', 
-                showCancelButton: true, 
-                confirmButtonColor: '#D50000' 
+                title: 'Observação', input: 'text', inputValue: this.obsItens[id] || '', placeholder: 'Ex: Urgente...', 
+                background: '#1E1E1E', color: '#FFF', showCancelButton: true, confirmButtonColor: '#D50000' 
             });
-            
-            if (text !== undefined) { 
-                this.$set(this.obsItens, id, text);
-                this.salvarNuvem(); 
-            }
+            if (text !== undefined) { this.$set(this.obsItens, id, text); this.salvarNuvem(); }
+        },
+        addAlgoMaisInsumo() {
+            if (!this.novoAlgoMais.trim()) return;
+            this.$root.vibrar(20);
+            this.listaAlgoMaisInsumos.push({ id: Date.now(), texto: this.novoAlgoMais.trim() });
+            this.novoAlgoMais = '';
+            this.salvarNuvem();
+        },
+        rmAlgoMaisInsumo(id) {
+            this.$root.vibrar(20);
+            this.listaAlgoMaisInsumos = this.listaAlgoMaisInsumos.filter(x => x.id !== id);
+            this.salvarNuvem();
         },
         salvarNuvem() { 
             db.collection("operacao").doc("contagemInsumos").set({ 
                 estoques: this.estoquesLoja, 
                 observacoes: this.obsItens,
+                listaAlgoMais: this.listaAlgoMaisInsumos,
                 user: this.$root.usuario.nome, 
                 ts: Date.now() 
             }, { merge: true });
@@ -126,59 +148,77 @@ Vue.component('tela-insumos', {
             this.$root.vibrar(30); 
             let txt = '';
             
+            // 1. INSUMOS PADRÃO
+            let txtInsumos = '';
             this.produtosFiltrados.forEach(p => {
                 if (this.precisaPedir(p)) {
                     let qtd = this.calcPedirFinal(p);
                     let obs = this.obsItens[p.id] ? ` (Obs: ${this.obsItens[p.id]})` : '';
-                    
-                    if (p.apenasNome) { 
-                        txt += `- ${qtd}x ${p.nome}${obs}\n`; 
-                    } else { 
-                        txt += `- ${qtd} ${p.undCompra} de ${p.nome}${obs}\n`; 
-                    }
+                    if (p.apenasNome) { txtInsumos += `- ${qtd}x ${p.nome}${obs}\n`; } 
+                    else { txtInsumos += `- ${qtd} ${p.undCompra} de ${p.nome}${obs}\n`; }
                 }
             });
+            if (txtInsumos !== '') txt += '*📦 INSUMOS:*\n' + txtInsumos + '\n';
+
+            // 2. LIMPEZA PADRÃO
+            let txtLimpeza = '';
+            this.limpezaSelecionados.forEach(id => {
+                const p = this.$root.bancoProdutos.find(x => x.id === id);
+                if (p) txtLimpeza += `- ${p.nome}\n`;
+            });
+            if (txtLimpeza !== '') txt += '*🧹 LIMPEZA:*\n' + txtLimpeza + '\n';
+
+            // 3. EXTRAS (Junta os Insumos Extras e Limpeza Extras)
+            let txtExtras = '';
+            this.listaAlgoMaisInsumos.forEach(i => txtExtras += `- ${i.texto}\n`);
+            this.limpezaAlgoMaisList.forEach(i => txtExtras += `- ${i.texto}\n`);
             
-            if (!txt) return;
+            if (txtExtras !== '') txt += '*➕ ALGO MAIS (Extras):*\n' + txtExtras + '\n';
+
+            if (!txt) {
+                Swal.fire({ icon: 'info', title: 'Lista Vazia', text: 'Não há nada para pedir.', background: '#1E1E1E', color: '#FFF' });
+                return;
+            }
             
-            this.$root.registrarHistorico('Pedido', 'Insumos', 'Gerou lista de Insumos da IA.');
+            this.$root.registrarHistorico('Pedido', 'Insumos + Limpeza', 'Enviou a lista combinada para o WhatsApp.');
             this.$root.enviarWhatsApp(txt); 
             
+            // PERGUNTA SE QUER ZERAR TUDO
             Swal.fire({ 
-                title: 'Limpar Contagem?', 
-                text: 'Deseja zerar os campos agora que enviou o pedido?', 
-                showCancelButton: true, 
-                confirmButtonColor: '#FF5252', 
-                confirmButtonText: 'Sim, limpar', 
-                cancelButtonColor: '#444',
-                cancelButtonText: 'Manter',
-                background: '#1E1E1E', 
-                color: '#FFF'
+                title: 'Limpar Contagens?', text: 'Deseja zerar Insumos e Limpeza agora que enviou o pedido?', 
+                showCancelButton: true, confirmButtonColor: '#FF5252', confirmButtonText: 'Sim, limpar tudo', 
+                cancelButtonColor: '#444', cancelButtonText: 'Manter', background: '#1E1E1E', color: '#FFF'
             }).then((r) => {
                 if (r.isConfirmed) { 
-                    this.estoquesLoja = {};
-                    this.obsItens = {};
-                    this.salvarNuvem(); 
+                    this.estoquesLoja = {}; this.obsItens = {}; this.listaAlgoMaisInsumos = []; this.salvarNuvem(); 
+                    db.collection("operacao").doc("carrinhoLimpeza").set({ selecionados: [], listaAlgoMais: [] });
                 }
             });
         }
     },
     mounted() {
+        // Escuta Insumos
         db.collection("operacao").doc("contagemInsumos").onSnapshot((doc) => {
             if (doc.exists) { 
                 let data = doc.data();
                 this.estoquesLoja = { ...data.estoques };
                 this.obsItens = { ...data.observacoes };
+                this.listaAlgoMaisInsumos = data.listaAlgoMais || [];
+            }
+        });
+
+        // Escuta Limpeza
+        db.collection("operacao").doc("carrinhoLimpeza").onSnapshot((doc) => {
+            if (doc.exists) {
+                let data = doc.data();
+                this.limpezaSelecionados = data.selecionados || [];
+                this.limpezaAlgoMaisList = data.listaAlgoMais || [];
             }
         });
         
         if (!document.getElementById('css-ins-fix')) {
-            const s = document.createElement('style'); 
-            s.id = 'css-ins-fix';
-            s.innerHTML = `
-                .input-nativo { width: 100%; border-radius: 8px; border: 1px solid #444; background: #2C2C2C; box-sizing: border-box; outline: none; }
-                .input-nativo:focus { border-color: #D50000; }
-            `;
+            const s = document.createElement('style'); s.id = 'css-ins-fix';
+            s.innerHTML = `.input-nativo { width: 100%; padding: 12px; font-size: 1.2rem; font-weight: bold; color: white; border-radius: 8px; border: 1px solid #444; background: #2C2C2C; box-sizing: border-box; outline: none; text-align: center; } .input-nativo:focus { border-color: #D50000; }`;
             document.head.appendChild(s);
         }
     }

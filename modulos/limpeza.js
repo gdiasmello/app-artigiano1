@@ -1,70 +1,86 @@
-// INÍCIO DO ARQUIVO modulos/limpeza.js - v0.0.85
+// INÍCIO DO ARQUIVO modulos/limpeza.js - v0.0.95
 Vue.component('tela-limpeza', {
     template: `
     <div class="container animate__animated animate__fadeIn" v-if="$root.usuario" style="padding-bottom: 100px;">
+        
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-            <h2 style="margin: 0; color: #2962FF;">🧹 Limpeza</h2>
-            <button @click="$root.mudarTela('tela-dashboard')" style="background: none; border: none; color: var(--text-sec); font-size: 1.5rem;"><i class="fas fa-arrow-left"></i></button>
+            <h2 style="margin: 0; color: #2962FF;">🧹 Limpeza & Diversos</h2>
+            <button @click="$root.mudarTela('tela-dashboard')" style="background: none; border: none; color: var(--text-sec); font-size: 1.5rem; cursor: pointer;">
+                <i class="fas fa-arrow-left"></i>
+            </button>
         </div>
 
-        <div v-if="checklistsAtivos.length === 0" style="text-align: center; color: #666; margin-top: 50px;">
-            <i class="fas fa-check-double" style="font-size: 3rem; margin-bottom: 15px;"></i>
-            <p>Tudo limpo por aqui hoje!</p>
-        </div>
-
-        <div v-for="chk in checklistsAtivos" :key="chk.id" class="card" style="border-left: 4px solid #2962FF; padding: 15px; margin-bottom: 15px;">
-            <h4 style="margin: 0 0 10px 0; color: #82B1FF;">{{ chk.titulo }}</h4>
-            <div v-for="t in chk.tarefas" :key="t.id" @click="toggleTarefa(t.id, t.texto)" style="display: flex; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid #222; cursor: pointer;">
-                <div style="width: 24px; height: 24px; border-radius: 6px; border: 2px solid #444; display: flex; align-items: center; justify-content: center;" :style="foiFeito(t.id) ? 'background: #2962FF; border-color: #2962FF;' : ''">
-                    <i v-if="foiFeito(t.id)" class="fas fa-check" style="color: white; font-size: 0.8rem;"></i>
+        <p style="color: #AAA; font-size: 0.9rem; margin-bottom: 20px;">
+            Marque o que está a faltar na loja. O pedido vai junto com os Insumos.
+        </p>
+        
+        <div style="display: grid; grid-template-columns: 1fr; gap: 10px; margin-bottom: 25px;">
+            <div v-for="p in produtosLimpeza" :key="p.id" @click="toggleItem(p.id)" class="card" style="padding: 15px; margin: 0; display: flex; align-items: center; gap: 15px; cursor: pointer; border: 1px solid #333;" :style="selecionados.includes(p.id) ? 'background: rgba(41,98,255,0.1); border-color: #2962FF;' : ''">
+                
+                <div style="width: 28px; height: 28px; border-radius: 6px; border: 2px solid #555; display: flex; align-items: center; justify-content: center; transition: 0.2s;" :style="selecionados.includes(p.id) ? 'background: #2962FF; border-color: #2962FF;' : ''">
+                    <i v-if="selecionados.includes(p.id)" class="fas fa-check" style="color: white; font-size: 1rem;"></i>
                 </div>
-                <span :style="foiFeito(t.id) ? 'color: #555; text-decoration: line-through;' : 'color: #EEE;'">{{ t.texto }}</span>
+                
+                <strong style="color: white; font-size: 1.1rem; flex: 1;" :style="selecionados.includes(p.id) ? 'color: #82B1FF;' : ''">{{ p.nome }}</strong>
+                
             </div>
         </div>
+
+        <div class="card" style="border-top: 4px solid #FFAB00; padding: 15px;">
+            <label style="color: #FFAB00; font-size: 0.9rem; font-weight: bold; margin-bottom: 10px; display: block;">
+                <i class="fas fa-plus-circle"></i> Faltou algo mais? (Lâmpada, vasilha, etc)
+            </label>
+            <textarea v-model="algoMais" @blur="salvarNuvem" placeholder="Escreva aqui..." rows="3" style="width: 100%; padding: 12px; background: #2C2C2C; border: 1px solid #444; border-radius: 8px; color: white; font-size: 1rem; box-sizing: border-box; outline: none; resize: none;"></textarea>
+        </div>
+
+        <div class="animate__animated animate__fadeInUp" style="position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); width: 90%; max-width: 560px; z-index: 100;">
+            <button @click="$root.mudarTela('tela-insumos')" class="btn" style="background: #2962FF; color: white; box-shadow: 0 5px 15px rgba(41,98,255,0.4); font-size: 1.1rem; height: 55px;">
+                IR PARA INSUMOS <i class="fas fa-arrow-right" style="margin-left: 8px;"></i>
+            </button>
+        </div>
+
     </div>
     `,
+    data() {
+        return {
+            selecionados: [],
+            algoMais: ''
+        };
+    },
     computed: {
-        checklistsAtivos() {
-            const hj = new Date().getDay();
-            return this.$root.bancoChecklists.filter(c => c.diasSemana.includes(hj));
+        produtosLimpeza() { 
+            return this.$root.bancoProdutos.filter(p => p.categoria === 'limpeza').sort((a,b) => a.nome.localeCompare(b.nome)); 
         }
     },
     methods: {
-        foiFeito(id) {
-            const hj = new Date().toISOString().split('T')[0];
-            return this.$root.tarefasConcluidas.some(t => t.idTarefa === id && t.dataAcao === hj);
-        },
-        toggleTarefa(id, txt) {
-            this.$root.vibrar(20);
-            const hj = new Date().toISOString().split('T')[0];
-            const tId = hj + "_" + id; // ID único na nuvem para este dia e tarefa
-            
-            const concluida = this.foiFeito(id);
-
-            // 🟢 SINCRONIZA COM FIREBASE
-            if (!concluida) {
-                db.collection("tarefas_dia").doc(tId).set({
-                    idTarefa: id,
-                    texto: txt,
-                    dataAcao: hj,
-                    usuario: this.$root.usuario.nome,
-                    timestamp: firebase.firestore.FieldValue.serverTimestamp()
-                });
-                this.$root.registrarHistorico('Limpeza', 'Rotina', txt);
+        toggleItem(id) {
+            this.$root.vibrar(15);
+            if (this.selecionados.includes(id)) {
+                this.selecionados = this.selecionados.filter(x => x !== id);
             } else {
-                db.collection("tarefas_dia").doc(tId).delete();
+                this.selecionados.push(id);
             }
+            this.salvarNuvem();
+        },
+        salvarNuvem() { 
+            // Salva a lista de IDs marcados e o texto na Nuvem
+            db.collection("operacao").doc("carrinhoLimpeza").set({ 
+                selecionados: this.selecionados, 
+                algoMais: this.algoMais,
+                user: this.$root.usuario.nome, 
+                ts: Date.now() 
+            });
         }
     },
     mounted() {
-        // 🟢 ESCUTA AS TAREFAS DO DIA EM TEMPO REAL
-        const hj = new Date().toISOString().split('T')[0];
-        db.collection("tarefas_dia").where("dataAcao", "==", hj)
-            .onSnapshot((snapshot) => {
-                let lista = [];
-                snapshot.forEach(doc => lista.push(doc.data()));
-                this.$root.tarefasConcluidas = lista;
-            });
+        // Puxa o estado atual da Nuvem para todos verem igual
+        db.collection("operacao").doc("carrinhoLimpeza").onSnapshot((doc) => {
+            if (doc.exists) { 
+                const data = doc.data();
+                this.selecionados = data.selecionados || [];
+                this.algoMais = data.algoMais || '';
+            }
+        });
     }
 });
 // FIM DO ARQUIVO modulos/limpeza.js
