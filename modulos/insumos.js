@@ -1,11 +1,11 @@
-// INÍCIO DO ARQUIVO modulos/insumos.js - v0.0.96
+// INÍCIO DO ARQUIVO modulos/insumos.js - v1.0.2
 Vue.component('tela-insumos', {
     template: `
     <div class="container animate__animated animate__fadeIn" v-if="$root.usuario" style="padding-bottom: 100px;">
         
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
             <h2 style="margin: 0; color: #D50000;">📦 Insumos</h2>
-            <button @click="$root.mudarTela('tela-dashboard')" style="background: none; border: none; color: var(--text-sec); font-size: 1.5rem;">
+            <button @click="$root.mudarTela('tela-dashboard')" style="background: none; border: none; color: var(--text-sec); font-size: 1.5rem; cursor: pointer;">
                 <i class="fas fa-arrow-left"></i>
             </button>
         </div>
@@ -75,7 +75,7 @@ Vue.component('tela-insumos', {
 
         <div v-if="temAlgoParaPedir || limpezaSelecionados.length > 0 || listaAlgoMaisInsumos.length > 0 || limpezaAlgoMaisList.length > 0" class="animate__animated animate__fadeInUp" style="position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); width: 90%; max-width: 560px; z-index: 100;">
             <button @click="fecharPedido" class="btn" style="background: #25D366; color: white; box-shadow: 0 5px 15px rgba(37,211,102,0.4); font-size: 1rem; height: 55px; white-space: nowrap;">
-                <i class="fab fa-whatsapp" style="font-size: 1.3rem; margin-right: 8px;"></i> ENVIAR INSUMOS E LIMPEZA
+                <i class="fab fa-whatsapp" style="font-size: 1.3rem; margin-right: 8px;"></i> ENVIAR LISTA ÚNICA
             </button>
         </div>
 
@@ -87,6 +87,7 @@ Vue.component('tela-insumos', {
             obsItens: {},
             listaAlgoMaisInsumos: [],
             novoAlgoMais: '',
+            
             // Variáveis que vêm da Limpeza via Firebase
             limpezaSelecionados: [],
             limpezaAlgoMaisList: []
@@ -104,7 +105,9 @@ Vue.component('tela-insumos', {
         }
     },
     methods: {
-        produtosPorRota(r) { return this.produtosFiltrados.filter(p => p.local === r).sort((a,b) => a.nome.localeCompare(b.nome)); },
+        produtosPorRota(r) { 
+            return this.produtosFiltrados.filter(p => p.local === r).sort((a,b) => a.nome.localeCompare(b.nome)); 
+        },
         precisaPedir(p) {
             let atual = this.estoquesLoja[p.id];
             if (atual === '' || atual === undefined || atual === null) return false;
@@ -113,15 +116,29 @@ Vue.component('tela-insumos', {
         calcPedirFinal(p) {
             let atual = this.estoquesLoja[p.id];
             let falta = p.estoqueIdeal - atual;
-            return p.apenasNome ? falta : Math.ceil(falta / p.fator);
+            
+            if (p.apenasNome) {
+                return falta; 
+            } else {
+                return Math.ceil(falta / p.fator);
+            }
         },
         async addObs(id) {
             this.$root.vibrar(20);
             const { value: text } = await Swal.fire({ 
-                title: 'Observação', input: 'text', inputValue: this.obsItens[id] || '', placeholder: 'Ex: Urgente...', 
-                background: '#1E1E1E', color: '#FFF', showCancelButton: true, confirmButtonColor: '#D50000' 
+                title: 'Observação', 
+                input: 'text', 
+                inputValue: this.obsItens[id] || '', 
+                placeholder: 'Ex: Urgente...', 
+                background: '#1E1E1E', 
+                color: '#FFF', 
+                showCancelButton: true, 
+                confirmButtonColor: '#D50000' 
             });
-            if (text !== undefined) { this.$set(this.obsItens, id, text); this.salvarNuvem(); }
+            if (text !== undefined) { 
+                this.$set(this.obsItens, id, text); 
+                this.salvarNuvem(); 
+            }
         },
         addAlgoMaisInsumo() {
             if (!this.novoAlgoMais.trim()) return;
@@ -146,58 +163,75 @@ Vue.component('tela-insumos', {
         },
         fecharPedido() {
             this.$root.vibrar(30); 
+            
+            // AGORA É TUDO UMA LISTA ÚNICA, SEM CATEGORIAS OU TÍTULOS
             let txt = '';
             
-            // 1. INSUMOS PADRÃO
-            let txtInsumos = '';
+            // 1. Insumos da IA
             this.produtosFiltrados.forEach(p => {
                 if (this.precisaPedir(p)) {
                     let qtd = this.calcPedirFinal(p);
                     let obs = this.obsItens[p.id] ? ` (Obs: ${this.obsItens[p.id]})` : '';
-                    if (p.apenasNome) { txtInsumos += `- ${qtd}x ${p.nome}${obs}\n`; } 
-                    else { txtInsumos += `- ${qtd} ${p.undCompra} de ${p.nome}${obs}\n`; }
+                    if (p.apenasNome) { 
+                        txt += `- ${qtd}x ${p.nome}${obs}\n`; 
+                    } else { 
+                        txt += `- ${qtd} ${p.undCompra} de ${p.nome}${obs}\n`; 
+                    }
                 }
             });
-            if (txtInsumos !== '') txt += '*📦 INSUMOS:*\n' + txtInsumos + '\n';
 
-            // 2. LIMPEZA PADRÃO
-            let txtLimpeza = '';
+            // 2. Limpeza (Quadradinhos marcados)
             this.limpezaSelecionados.forEach(id => {
                 const p = this.$root.bancoProdutos.find(x => x.id === id);
-                if (p) txtLimpeza += `- ${p.nome}\n`;
+                if (p) {
+                    txt += `- ${p.nome}\n`;
+                }
             });
-            if (txtLimpeza !== '') txt += '*🧹 LIMPEZA:*\n' + txtLimpeza + '\n';
 
-            // 3. EXTRAS (Junta os Insumos Extras e Limpeza Extras)
-            let txtExtras = '';
-            this.listaAlgoMaisInsumos.forEach(i => txtExtras += `- ${i.texto}\n`);
-            this.limpezaAlgoMaisList.forEach(i => txtExtras += `- ${i.texto}\n`);
+            // 3. Algo Mais (Insumos + Limpeza misturados)
+            this.listaAlgoMaisInsumos.forEach(i => {
+                txt += `- ${i.texto}\n`;
+            });
             
-            if (txtExtras !== '') txt += '*➕ ALGO MAIS (Extras):*\n' + txtExtras + '\n';
+            this.limpezaAlgoMaisList.forEach(i => {
+                txt += `- ${i.texto}\n`;
+            });
 
             if (!txt) {
                 Swal.fire({ icon: 'info', title: 'Lista Vazia', text: 'Não há nada para pedir.', background: '#1E1E1E', color: '#FFF' });
                 return;
             }
             
-            this.$root.registrarHistorico('Pedido', 'Insumos + Limpeza', 'Enviou a lista combinada para o WhatsApp.');
+            this.$root.registrarHistorico('Pedido', 'Lista Única', 'Enviou a lista unificada para o WhatsApp.');
             this.$root.enviarWhatsApp(txt); 
             
-            // PERGUNTA SE QUER ZERAR TUDO
             Swal.fire({ 
-                title: 'Limpar Contagens?', text: 'Deseja zerar Insumos e Limpeza agora que enviou o pedido?', 
-                showCancelButton: true, confirmButtonColor: '#FF5252', confirmButtonText: 'Sim, limpar tudo', 
-                cancelButtonColor: '#444', cancelButtonText: 'Manter', background: '#1E1E1E', color: '#FFF'
+                title: 'Limpar Contagens?', 
+                text: 'Deseja zerar Insumos e Limpeza agora que enviou o pedido?', 
+                showCancelButton: true, 
+                confirmButtonColor: '#FF5252', 
+                confirmButtonText: 'Sim, limpar tudo', 
+                cancelButtonColor: '#444', 
+                cancelButtonText: 'Manter', 
+                background: '#1E1E1E', 
+                color: '#FFF'
             }).then((r) => {
                 if (r.isConfirmed) { 
-                    this.estoquesLoja = {}; this.obsItens = {}; this.listaAlgoMaisInsumos = []; this.salvarNuvem(); 
-                    db.collection("operacao").doc("carrinhoLimpeza").set({ selecionados: [], listaAlgoMais: [] });
+                    this.estoquesLoja = {}; 
+                    this.obsItens = {}; 
+                    this.listaAlgoMaisInsumos = []; 
+                    this.salvarNuvem(); 
+                    
+                    db.collection("operacao").doc("carrinhoLimpeza").set({ 
+                        selecionados: [], 
+                        listaAlgoMais: [] 
+                    });
                 }
             });
         }
     },
     mounted() {
-        // Escuta Insumos
+        // Escuta Insumos da Nuvem
         db.collection("operacao").doc("contagemInsumos").onSnapshot((doc) => {
             if (doc.exists) { 
                 let data = doc.data();
@@ -207,7 +241,7 @@ Vue.component('tela-insumos', {
             }
         });
 
-        // Escuta Limpeza
+        // Escuta Limpeza da Nuvem
         db.collection("operacao").doc("carrinhoLimpeza").onSnapshot((doc) => {
             if (doc.exists) {
                 let data = doc.data();
@@ -216,10 +250,28 @@ Vue.component('tela-insumos', {
             }
         });
         
-        if (!document.getElementById('css-ins-fix')) {
-            const s = document.createElement('style'); s.id = 'css-ins-fix';
-            s.innerHTML = `.input-nativo { width: 100%; padding: 12px; font-size: 1.2rem; font-weight: bold; color: white; border-radius: 8px; border: 1px solid #444; background: #2C2C2C; box-sizing: border-box; outline: none; text-align: center; } .input-nativo:focus { border-color: #D50000; }`;
-            document.head.appendChild(s);
+        if (!document.getElementById('css-ins-v102')) {
+            const style = document.createElement('style'); 
+            style.id = 'css-ins-v102';
+            style.innerHTML = `
+                .input-nativo { 
+                    width: 100%; 
+                    padding: 12px; 
+                    font-size: 1.2rem; 
+                    font-weight: bold; 
+                    color: white; 
+                    border-radius: 8px; 
+                    border: 1px solid #444; 
+                    background: #2C2C2C; 
+                    box-sizing: border-box; 
+                    outline: none; 
+                    text-align: center; 
+                } 
+                .input-nativo:focus { 
+                    border-color: #D50000; 
+                }
+            `;
+            document.head.appendChild(style);
         }
     }
 });

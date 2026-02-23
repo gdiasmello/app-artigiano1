@@ -1,4 +1,4 @@
-// INÍCIO DO ARQUIVO modulos/login.js - v0.0.93
+// INÍCIO DO ARQUIVO modulos/login.js - v1.0.2
 Vue.component('tela-login', {
     template: `
     <div class="container animate__animated animate__fadeIn" style="display: flex; flex-direction: column; justify-content: center; min-height: 95vh;">
@@ -10,6 +10,7 @@ Vue.component('tela-login', {
         </div>
 
         <div v-if="etapa === 'padrao'" class="card animate__animated animate__fadeIn" style="padding: 25px; background: #1A1A1A; border: 1px solid #333;">
+            
             <label style="display: block; margin-bottom: 8px; color: #888; font-weight: bold; font-size: 0.8rem; text-align: center;">USUÁRIO (NOME CURTO)</label>
             <input type="text" v-model="nomeUsuario" placeholder="Ex: João" class="input-nativo" />
 
@@ -71,13 +72,21 @@ Vue.component('tela-login', {
                 SOLICITAR AUTORIZAÇÃO
             </button>
         </div>
+
+        <p class="versao-app-pulse">v{{ $root.versaoApp }}</p>
+
     </div>
     `,
     data() {
         return {
             etapa: 'padrao',
-            nomeUsuario: '', pin: '',
-            usuarioTemp: null, nomeCompleto: '', novoPin: '', dataNascimento: '', aceitouTermo: false,
+            nomeUsuario: '', 
+            pin: '',
+            usuarioTemp: null, 
+            nomeCompleto: '', 
+            novoPin: '', 
+            dataNascimento: '', 
+            aceitouTermo: false,
             nomeRecuperacao: ''
         };
     },
@@ -88,7 +97,7 @@ Vue.component('tela-login', {
             const user = this.$root.equipe.find(x => x.nome.toLowerCase() === nomeDigitado && x.pin === this.pin);
             
             if (user) {
-                // 🟢 REGRA: SE A SENHA É 1234, VAI PARA O CADASTRO PESSOAL
+                // REGRA: SE A SENHA É 1234, VAI PARA O CADASTRO PESSOAL
                 if (user.pin === '1234') {
                     this.usuarioTemp = user;
                     this.nomeCompleto = user.nomeCompleto || '';
@@ -117,7 +126,9 @@ Vue.component('tela-login', {
             Swal.fire({
                 title: 'Termo de Isenção',
                 html: textoTermo,
-                background: '#1E1E1E', color: '#FFF', confirmButtonColor: '#FFAB00'
+                background: '#1E1E1E', 
+                color: '#FFF', 
+                confirmButtonColor: '#FFAB00'
             });
         },
         salvarNovoPerfil() {
@@ -141,7 +152,7 @@ Vue.component('tela-login', {
             this.$root.equipe[idx].termoAceito = true;
             this.$root.equipe[idx].dataTermoAceito = new Date().toLocaleString('pt-BR');
 
-            // 🟢 SINCRONIZA USUÁRIO NO FIREBASE
+            // SINCRONIZA USUÁRIO NO FIREBASE
             db.collection("configuracoes").doc("equipe").set({ lista: this.$root.equipe }, { merge: true });
             this.$root.salvarMemoriaLocal();
             
@@ -172,13 +183,17 @@ Vue.component('tela-login', {
         }
     },
     mounted() {
-        if (!document.getElementById('css-log-v93')) {
+        if (!document.getElementById('css-log-v102')) {
             const style = document.createElement('style');
-            style.id = 'css-log-v93';
+            style.id = 'css-log-v102';
             style.innerHTML = `
                 .input-nativo { width: 100%; padding: 15px; border-radius: 8px; border: 1px solid #444; background: #2C2C2C; color: white; font-size: 1.1rem; box-sizing: border-box; margin-bottom: 15px; text-align: center; }
                 .input-nativo:focus { border-color: var(--cor-primaria); outline: none; }
                 .label-ia { color: #AAA; font-size: 0.75rem; font-weight: bold; margin-bottom: 5px; display: block; letter-spacing: 1px; }
+                
+                /* Animação suave para a versão do app */
+                .versao-app-pulse { text-align: center; color: #555; font-size: 0.9rem; font-weight: bold; letter-spacing: 2px; margin-top: 30px; animation: piscarLento 3s infinite alternate ease-in-out; }
+                @keyframes piscarLento { 0% { opacity: 0.2; } 100% { opacity: 0.8; } }
             `;
             document.head.appendChild(style);
         }
