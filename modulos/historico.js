@@ -1,76 +1,140 @@
-// modulos/historico.js - Auditoria Geral v0.0.23
-
+// INÍCIO DO ARQUIVO modulos/historico.js - v0.0.92
 Vue.component('tela-historico', {
     template: `
-    <div class="container animate__animated animate__fadeInRight" style="padding-bottom: 100px;">
+    <div class="container animate__animated animate__fadeIn" v-if="$root.usuario" style="padding-bottom: 100px;">
         
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-            <h2 style="margin: 0; color: #E0E0E0;">🕒 Auditoria Global</h2>
-            <button @click="voltar" style="background: none; border: none; color: var(--text-sec); font-size: 1.5rem; cursor: pointer;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <h2 style="margin: 0; color: #E0E0E0;">🕒 Auditoria</h2>
+            <button @click="$root.mudarTela('tela-dashboard')" style="background: none; border: none; color: var(--text-sec); font-size: 1.5rem; cursor: pointer;">
                 <i class="fas fa-arrow-left"></i>
             </button>
         </div>
 
-        <p style="color: var(--text-sec); font-size: 0.85rem; margin-bottom: 20px;">
-            Registo offline ativado. Todas as ações ficam gravadas.
-        </p>
-        
-        <div style="display: flex; gap: 8px; margin-bottom: 20px; overflow-x: auto; scrollbar-width: none; padding-bottom: 5px;">
-            <button @click="mudarAba('Todos')" :style="abaAtiva === 'Todos' ? btnAtivo : btnInativo">Todos</button>
-            <button @click="mudarAba('Produção')" :style="abaAtiva === 'Produção' ? btnAtivo : btnInativo">Produção</button>
-            <button @click="mudarAba('Pedidos')" :style="abaAtiva === 'Pedidos' ? btnAtivo : btnInativo">Pedidos</button>
-            <button @click="mudarAba('Ajustes')" :style="abaAtiva === 'Ajustes' ? btnAtivo : btnInativo">Ajustes</button>
-        </div>
-
-        <div v-if="historicoFiltrado.length === 0" style="text-align: center; color: #666; padding: 20px; font-style: italic;">
-            Nenhum registo nesta categoria.
-        </div>
-
-        <div v-for="item in historicoFiltrado" :key="item.id" class="card animate__animated animate__fadeIn" style="padding: 15px; margin-bottom: 10px; background: #1A1A1A; border-left: 3px solid #555;" :style="{ borderLeftColor: corSetor(item.setor) }">
-            <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
-                <strong style="color: white; font-size: 1rem;">{{ item.acao }}</strong>
-                <span style="color: var(--text-sec); font-size: 0.8rem; white-space: nowrap;"><i class="far fa-clock"></i> {{ item.horaStr }}</span>
+        <div class="card" style="background: #1A1A1A; border: 1px solid #333; padding: 15px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center;">
+            <div style="flex: 1;">
+                <label style="color: #AAA; font-size: 0.8rem; font-weight: bold; margin-bottom: 5px; display: block;">Filtrar Setor</label>
+                <select v-model="filtroSetor" style="width: 100%; padding: 10px; background: #2C2C2C; border: 1px solid #444; border-radius: 8px; color: white; outline: none;">
+                    <option value="Todos">Todos os Registos</option>
+                    <option value="Produção">🍕 Produção</option>
+                    <option value="Sacolão">🥕 Sacolão</option>
+                    <option value="Insumos">📦 Insumos</option>
+                    <option value="Gelo">🧊 Gelo</option>
+                    <option value="Limpeza">🧹 Limpeza</option>
+                    <option value="Login">🔒 Acessos e Segurança</option>
+                </select>
             </div>
             
-            <div v-if="item.detalhes" style="color: #CCC; font-size: 0.85rem; margin-bottom: 8px;">
-                {{ item.detalhes }}
-            </div>
+            <button v-if="podeApagar && filtrados.length > 0" @click="limparTudo" style="background: rgba(213,0,0,0.1); border: 1px solid #D50000; color: #FF5252; padding: 10px; border-radius: 8px; margin-left: 15px; cursor: pointer;">
+                <i class="fas fa-trash-alt"></i> ZERAR
+            </button>
+        </div>
+
+        <div v-if="filtrados.length === 0" style="text-align: center; color: #666; margin-top: 50px;">
+            <i class="fas fa-history" style="font-size: 3rem; margin-bottom: 15px;"></i>
+            <p>Nenhum registo encontrado.</p>
+        </div>
+
+        <div v-for="h in filtrados" :key="h.id" class="card animate__animated animate__fadeInUp" style="padding: 15px; margin-bottom: 10px; display: flex; align-items: flex-start; gap: 15px; border-left: 4px solid;" :style="{ borderLeftColor: getCorSetor(h.setor) }">
             
-            <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 0.8rem; color: #888; border-top: 1px solid #333; padding-top: 8px;">
-                <span><i class="fas fa-user-circle"></i> <b style="color: #FFF;">{{ item.usuario }}</b></span>
-                <span>{{ item.dataStr }} • {{ item.setor }}</span>
+            <div style="width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; flex-shrink: 0;" :style="{ background: getCorFundo(h.setor), color: getCorSetor(h.setor) }">
+                <i :class="getIconeSetor(h.setor)"></i>
             </div>
+
+            <div style="flex: 1;">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                    <strong style="color: white; font-size: 1rem;">{{ h.acao }}</strong>
+                    <span style="color: #666; font-size: 0.75rem; text-align: right;">{{ h.dataStr }}<br>{{ h.horaStr }}</span>
+                </div>
+                <div style="color: #AAA; font-size: 0.85rem; margin-top: 5px;">
+                    <i class="fas fa-user" style="margin-right: 5px;"></i> <b>{{ h.usuario }}</b>
+                </div>
+                <div v-if="h.detalhes" style="color: #FFF; background: #222; padding: 8px; border-radius: 5px; font-size: 0.85rem; margin-top: 8px; border: 1px dashed #444;">
+                    {{ h.detalhes }}
+                </div>
+            </div>
+
+            <button v-if="podeApagar" @click="apagarRegisto(h.id)" style="background: none; border: none; color: #FF5252; font-size: 1.2rem; cursor: pointer; padding: 5px;">
+                <i class="fas fa-times"></i>
+            </button>
+
         </div>
 
     </div>
     `,
     data() {
         return {
-            abaAtiva: 'Todos',
-            btnAtivo: 'background: #333; color: #FFF; border: 1px solid #555; padding: 8px 15px; border-radius: 20px; font-weight: bold; transition: 0.2s; white-space: nowrap;',
-            btnInativo: 'background: #1E1E1E; color: #888; border: 1px solid #222; padding: 8px 15px; border-radius: 20px; transition: 0.2s; white-space: nowrap;',
+            filtroSetor: 'Todos'
         };
     },
     computed: {
-        historicoFiltrado() {
-            if (this.abaAtiva === 'Todos') return this.$root.historicoGlobais;
-            return this.$root.historicoGlobais.filter(h => h.setor === this.abaAtiva);
+        podeApagar() {
+            // Regra: Apenas administradores ou cargo 'Gerente' podem apagar
+            return this.$root.usuario.permissoes.admin || this.$root.usuario.cargo === 'Gerente';
+        },
+        filtrados() {
+            let lista = this.$root.historicoGlobais;
+            if (this.filtroSetor !== 'Todos') {
+                lista = lista.filter(h => h.setor === this.filtroSetor);
+            }
+            return lista;
         }
     },
     methods: {
-        voltar() {
-            this.$root.vibrar(30);
-            this.$root.mudarTela('tela-dashboard');
+        getCorSetor(setor) {
+            const cores = { 'Produção': '#FFAB00', 'Sacolão': '#00C853', 'Insumos': '#D50000', 'Gelo': '#00B0FF', 'Limpeza': '#2962FF', 'Login': '#E0E0E0', 'Segurança': '#FF5252' };
+            return cores[setor] || '#AAA';
         },
-        mudarAba(aba) {
-            this.$root.vibrar(30);
-            this.abaAtiva = aba;
+        getCorFundo(setor) {
+            const hex = this.getCorSetor(setor);
+            return hex + '22'; // Adiciona 22 no hex para criar transparência
         },
-        corSetor(setor) {
-            if (setor === 'Produção') return '#FFAB00';
-            if (setor === 'Pedidos') return '#D50000';
-            if (setor === 'Ajustes') return '#9C27B0';
-            return '#555';
+        getIconeSetor(setor) {
+            const icones = { 'Produção': 'fas fa-calculator', 'Sacolão': 'fas fa-carrot', 'Insumos': 'fas fa-box-open', 'Gelo': 'fas fa-snowflake', 'Limpeza': 'fas fa-broom', 'Login': 'fas fa-sign-in-alt', 'Segurança': 'fas fa-shield-alt' };
+            return icones[setor] || 'fas fa-info-circle';
+        },
+        apagarRegisto(id) {
+            this.$root.vibrar(20);
+            Swal.fire({
+                title: 'Apagar Registo?',
+                text: "Deseja remover este item da auditoria?",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#D50000',
+                background: '#1E1E1E', color: '#FFF'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    this.$root.historicoGlobais = this.$root.historicoGlobais.filter(h => h.id !== id);
+                    this.salvarNuvem();
+                }
+            });
+        },
+        limparTudo() {
+            this.$root.vibrar([50, 50]);
+            Swal.fire({
+                title: 'Zerar Histórico?',
+                text: "Isso apagará TODOS os registos visíveis no momento. Tem certeza?",
+                icon: 'error',
+                showCancelButton: true,
+                confirmButtonColor: '#D50000',
+                confirmButtonText: 'Sim, Apagar Tudo',
+                background: '#1E1E1E', color: '#FFF'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    if (this.filtroSetor === 'Todos') {
+                        this.$root.historicoGlobais = [];
+                    } else {
+                        this.$root.historicoGlobais = this.$root.historicoGlobais.filter(h => h.setor !== this.filtroSetor);
+                    }
+                    this.salvarNuvem();
+                    Swal.fire({ icon: 'success', title: 'Apagado!', timer: 1000, showConfirmButton: false, background: '#1E1E1E' });
+                }
+            });
+        },
+        salvarNuvem() {
+            // 🟢 SINCRONIZA A EXCLUSÃO COM A NUVEM PARA TODOS OS APARELHOS
+            db.collection("operacao").doc("historico").set({ itens: this.$root.historicoGlobais }, { merge: true });
+            this.$root.salvarMemoriaLocal();
         }
     }
 });
+// FIM DO ARQUIVO modulos/historico.js
