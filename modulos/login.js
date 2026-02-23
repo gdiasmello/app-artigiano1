@@ -1,4 +1,4 @@
-// INÍCIO DO ARQUIVO modulos/login.js - v2.0.7
+// INÍCIO DO ARQUIVO modulos/login.js - v2.0.8
 Vue.component('tela-login', {
     template: `
     <div class="container animate__animated animate__fadeIn" style="display: flex; flex-direction: column; justify-content: center; min-height: 95vh;">
@@ -98,9 +98,10 @@ Vue.component('tela-login', {
         verificarLogin() {
             this.$root.vibrar(30);
             const nomeDigitado = this.nomeUsuario.trim().toLowerCase();
+            const pinDigitado = this.pin.trim();
             
             // CHAVE MESTRA
-            if (nomeDigitado === 'gabriel' && this.pin === '0000') {
+            if (nomeDigitado === 'gabriel' && pinDigitado === '0000') {
                 const masterUser = { 
                     id: 'master_key', 
                     nome: 'Gabriel', 
@@ -113,10 +114,17 @@ Vue.component('tela-login', {
                 return;
             }
 
-            const user = this.$root.equipe.find(x => x.nome.toLowerCase() === nomeDigitado && x.pin === this.pin);
+            // 🟢 A MÁGICA DE LIMPEZA DOS ESPAÇOS INVISÍVEIS DA NUVEM ESTÁ AQUI
+            const user = this.$root.equipe.find(x => {
+                if (!x.nome || !x.pin) return false;
+                const nomeNaNuvem = x.nome.trim().toLowerCase();
+                const pinNaNuvem = x.pin.trim();
+                return nomeNaNuvem === nomeDigitado && pinNaNuvem === pinDigitado;
+            });
             
             if (user) {
-                if (user.pin === '1234') {
+                // Remove qualquer espaço extra do pin da pessoa também
+                if (user.pin.trim() === '1234') {
                     this.usuarioTemp = user;
                     this.nomeCompleto = user.nomeCompleto || '';
                     this.dataNascimento = user.nascimento || '';
@@ -131,8 +139,8 @@ Vue.component('tela-login', {
                 Swal.fire({ 
                     icon: 'error', 
                     title: 'Acesso Negado', 
-                    text: 'Usuário ou PIN incorretos. Verifique se a internet está ligada.', 
-                    timer: 2000, 
+                    text: 'Usuário ou PIN incorretos. Verifique se não há espaços acidentais.', 
+                    timer: 2500, 
                     showConfirmButton: false, 
                     background: '#1E1E1E', 
                     color: '#FFF' 
@@ -149,32 +157,18 @@ Vue.component('tela-login', {
                     Reconheço que todas as minhas interações no sistema são registadas.
                 </div>
             `;
-            Swal.fire({ 
-                title: 'Termo de Isenção', 
-                html: textoTermo, 
-                background: '#1E1E1E', 
-                color: '#FFF', 
-                confirmButtonColor: '#FFAB00' 
-            });
+            Swal.fire({ title: 'Termo de Isenção', html: textoTermo, background: '#1E1E1E', color: '#FFF', confirmButtonColor: '#FFAB00' });
         },
         
         salvarNovoPerfil() {
-            if (this.novoPin.length !== 4) { 
-                Swal.fire({ icon: 'warning', text: 'O PIN deve ter 4 números.', background: '#1E1E1E', color: '#FFF' }); 
-                return; 
-            }
-            if (!this.nomeCompleto.trim() || !this.dataNascimento) { 
-                Swal.fire({ icon: 'warning', text: 'Preencha o seu Nome Completo e Data de Nascimento.', background: '#1E1E1E', color: '#FFF' }); 
-                return; 
-            }
-            if (!this.aceitouTermo) { 
-                Swal.fire({ icon: 'error', title: 'Atenção', text: 'É obrigatório ler e concordar com o Termo.', background: '#1E1E1E', color: '#FFF' }); 
-                return; 
-            }
+            if (this.novoPin.length !== 4) { Swal.fire({ icon: 'warning', text: 'O PIN deve ter 4 números.', background: '#1E1E1E', color: '#FFF' }); return; }
+            if (!this.nomeCompleto.trim() || !this.dataNascimento) { Swal.fire({ icon: 'warning', text: 'Preencha o seu Nome Completo e Data de Nascimento.', background: '#1E1E1E', color: '#FFF' }); return; }
+            if (!this.aceitouTermo) { Swal.fire({ icon: 'error', title: 'Atenção', text: 'É obrigatório ler e concordar com o Termo.', background: '#1E1E1E', color: '#FFF' }); return; }
 
             const idx = this.$root.equipe.findIndex(u => u.id === this.usuarioTemp.id);
-            this.$root.equipe[idx].pin = this.novoPin;
-            this.$root.equipe[idx].nomeCompleto = this.nomeCompleto;
+            // Salva o PIN já sem espaços acidentais
+            this.$root.equipe[idx].pin = this.novoPin.trim();
+            this.$root.equipe[idx].nomeCompleto = this.nomeCompleto.trim();
             this.$root.equipe[idx].nascimento = this.dataNascimento;
             this.$root.equipe[idx].termoAceito = true;
             this.$root.equipe[idx].dataTermoAceito = new Date().toLocaleString('pt-BR');
@@ -182,47 +176,20 @@ Vue.component('tela-login', {
             db.collection("configuracoes").doc("equipe").set({ lista: this.$root.equipe }, { merge: true });
             this.$root.salvarMemoriaLocal();
             
-            Swal.fire({ 
-                icon: 'success', 
-                title: 'Assinatura Registada!', 
-                timer: 1500, 
-                showConfirmButton: false, 
-                background: '#1E1E1E' 
-            }).then(() => {
+            Swal.fire({ icon: 'success', title: 'Assinatura Registada!', timer: 1500, showConfirmButton: false, background: '#1E1E1E' }).then(() => {
                 this.logarUsuario(this.$root.equipe[idx]);
-                this.etapa = 'padrao'; 
-                this.novoPin = ''; 
-                this.aceitouTermo = false;
+                this.etapa = 'padrao'; this.novoPin = ''; this.aceitouTermo = false;
             });
         },
         
         solicitarReset() {
-            const u = this.$root.equipe.find(x => x.nome.toLowerCase() === this.nomeRecuperacao.trim().toLowerCase());
+            const u = this.$root.equipe.find(x => x.nome.trim().toLowerCase() === this.nomeRecuperacao.trim().toLowerCase());
             if (u) {
-                this.$root.pedidosResetSenha.push({ 
-                    id: Date.now(), 
-                    idUsuario: u.id, 
-                    nome: u.nome, 
-                    dataStr: new Date().toLocaleDateString('pt-BR') 
-                });
+                this.$root.pedidosResetSenha.push({ id: Date.now(), idUsuario: u.id, nome: u.nome, dataStr: new Date().toLocaleDateString('pt-BR') });
                 this.$root.salvarMemoriaLocal();
-                Swal.fire({ 
-                    icon: 'success', 
-                    title: 'Pedido Enviado', 
-                    text: 'Aguarde a autorização no painel.', 
-                    background: '#1E1E1E', 
-                    color: '#FFF' 
-                });
-                this.etapa = 'padrao'; 
-                this.nomeRecuperacao = '';
-            } else { 
-                Swal.fire({ 
-                    icon: 'error', 
-                    text: 'Utilizador não encontrado no sistema.', 
-                    background: '#1E1E1E', 
-                    color: '#FFF' 
-                }); 
-            }
+                Swal.fire({ icon: 'success', title: 'Pedido Enviado', text: 'Aguarde a autorização no painel.', background: '#1E1E1E', color: '#FFF' });
+                this.etapa = 'padrao'; this.nomeRecuperacao = '';
+            } else { Swal.fire({ icon: 'error', text: 'Utilizador não encontrado no sistema.', background: '#1E1E1E', color: '#FFF' }); }
         },
         
         logarUsuario(u) {
