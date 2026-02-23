@@ -1,5 +1,6 @@
-// INÍCIO DO ARQUIVO main.js - v0.0.92
+// INÍCIO DO ARQUIVO main.js - v1.0.2
 
+// 1. CONFIGURAÇÃO DO FIREBASE
 const firebaseConfig = {
     apiKey: "AIzaSyBL70gtkhjBvC9BiKvz5HBivH07JfRKuo4",
     authDomain: "artigiano-app.firebaseapp.com",
@@ -10,11 +11,13 @@ const firebaseConfig = {
     appId: "1:212218495726:web:dd6fec7a4a8c7ad572a9ff"
 };
 
+// Inicializa a Nuvem
 if (!firebase.apps.length) { 
     firebase.initializeApp(firebaseConfig); 
 }
 const db = firebase.firestore();
 
+// 2. ESCUDO ANTI-ERRO GLOBAL
 window.onerror = function(msg, url, line, col, error) { return false; };
 Vue.config.errorHandler = function (err, vm, info) {
     console.error(err);
@@ -26,9 +29,13 @@ Vue.config.errorHandler = function (err, vm, info) {
     }
 };
 
+// 3. APLICAÇÃO VUE PRINCIPAL
 const app = new Vue({
     el: '#app',
     data: {
+        // 🟢 SISTEMA DE VERSÃO AUTOMÁTICO
+        versaoApp: '1.0.2',
+
         viewAtual: 'tela-login',
         usuario: null,
         naPizzaria: false,
@@ -40,15 +47,36 @@ const app = new Vue({
         dataEstoqueMassas: '', 
         carrinhoInsumos: [], 
         carrinhoSacolao: [], 
-        clima: { temperatura: '...', riscoChuvaNoturna: false, modoSmart: true, isCalor: false, geloVerificado: false },
         
-        metas: { 0: 80, 1: 0, 2: 0, 3: 60, 4: 65, 5: 110, 6: 120, feriado: 130 },
-        feriados: [],
+        clima: { 
+            temperatura: '...', 
+            riscoChuvaNoturna: false, 
+            modoSmart: true, 
+            isCalor: false, 
+            geloVerificado: false 
+        },
+        
+        metas: { 
+            0: 80, 1: 0, 2: 0, 3: 60, 4: 65, 5: 110, 6: 120, feriado: 130 
+        },
+        
+        feriados: [
+            { data: "2026-12-25", nome: "Natal" }
+        ],
         avisos: [],
         rotasSalvas: ['Geladeira 1', 'Estoque Seco', 'Embalagens', 'Material de Limpeza'],
         
-        estadoErroIA: { titulo: 'Aviso', mensagem: '', icone: 'fa-exclamation-triangle', cor: '#FF5252', telaDestino: 'tela-dashboard', permitirIgnorar: false, callbackIgnorar: null },
+        estadoErroIA: { 
+            titulo: 'Aviso', 
+            mensagem: '', 
+            icone: 'fa-exclamation-triangle', 
+            cor: '#FF5252', 
+            telaDestino: 'tela-dashboard', 
+            permitirIgnorar: false, 
+            callbackIgnorar: null 
+        },
 
+        // BANCOS DE DADOS
         equipe: [],
         bancoProdutos: [],
         bancoChecklists: [],
@@ -59,32 +87,52 @@ const app = new Vue({
     },
     methods: {
         vibrar(padrao) { 
-            if (this.usuario?.preferencias?.vibracao !== false && 'vibrate' in navigator) { navigator.vibrate(padrao); } 
+            if (this.usuario?.preferencias?.vibracao !== false && 'vibrate' in navigator) { 
+                navigator.vibrate(padrao); 
+            } 
         },
+        
         mudarTela(novaTela, registrarHistorico = true) {
             this.vibrar(30); 
             this.viewAtual = novaTela; 
             window.scrollTo(0, 0);
-            if (registrarHistorico) { history.pushState({ tela: novaTela }, ""); }
+            if (registrarHistorico) { 
+                history.pushState({ tela: novaTela }, ""); 
+            }
         },
+        
         fazerLogout() { 
             this.vibrar([50, 50, 50]); 
             this.usuario = null; 
             this.mudarTela('tela-login'); 
         },
+        
         lidarComBotaoVoltar(event) {
             if (this.viewAtual === 'tela-dashboard' || this.viewAtual === 'tela-login') {
                 this.vibrar([50, 100]);
                 Swal.fire({ 
-                    title: 'Sair do App?', text: "Deseja fechar o aplicativo?", icon: 'question', 
-                    showCancelButton: true, confirmButtonColor: '#D50000', cancelButtonColor: '#444', 
-                    confirmButtonText: 'Sim, Sair', cancelButtonText: 'Ficar', background: '#1E1E1E', color: '#FFF' 
+                    title: 'Sair do App?', 
+                    text: "Deseja fechar o aplicativo?", 
+                    icon: 'question', 
+                    showCancelButton: true, 
+                    confirmButtonColor: '#D50000', 
+                    cancelButtonColor: '#444', 
+                    confirmButtonText: 'Sim, Sair', 
+                    cancelButtonText: 'Ficar', 
+                    background: '#1E1E1E', 
+                    color: '#FFF' 
                 }).then((result) => {
-                    if (result.isConfirmed) { if (navigator.app) navigator.app.exitApp(); else window.close(); } 
-                    else { history.pushState({ tela: this.viewAtual }, ""); }
+                    if (result.isConfirmed) { 
+                        if (navigator.app) navigator.app.exitApp(); else window.close(); 
+                    } else { 
+                        history.pushState({ tela: this.viewAtual }, ""); 
+                    }
                 });
-            } else { this.mudarTela('tela-dashboard', false); }
+            } else { 
+                this.mudarTela('tela-dashboard', false); 
+            }
         },
+        
         enviarWhatsApp(listaTexto) {
             this.vibrar(30);
             const hora = new Date().getHours(); 
@@ -97,11 +145,17 @@ const app = new Vue({
             const despedida = pref.despedidaZap || 'Obrigado.';
             
             const textoFinal = `${tempo}!${saudacao}\nPedido de hoje:\n\n${listaTexto}\n\n${despedida}`;
-            window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(textoFinal)}`, '_blank');
+            const link = `https://api.whatsapp.com/send?text=${encodeURIComponent(textoFinal)}`;
+            window.open(link, '_blank');
         },
+        
         async verificarBiometriaLocal() { 
-            if (window.PublicKeyCredential) { try { return true; } catch (e) { return false; } } return false; 
+            if (window.PublicKeyCredential) { 
+                try { return true; } catch (e) { return false; } 
+            } 
+            return false; 
         },
+        
         async dispararInstalacao() {
             if (this.eventoInstalacao) { 
                 this.eventoInstalacao.prompt(); 
@@ -109,11 +163,13 @@ const app = new Vue({
                 if (outcome === 'accepted') { this.estaInstalado = true; } 
             }
         },
+        
         dispararAlertaIA(opcoes) { 
             this.vibrar([100, 50, 100]); 
             this.estadoErroIA = { ...this.estadoErroIA, ...opcoes }; 
             this.mudarTela('tela-erros'); 
         },
+        
         resolverPizzaSazonal(nomePizza, aindaTemos) {
             this.vibrar(30);
             this.autorizarAcao('remover', () => {
@@ -133,45 +189,64 @@ const app = new Vue({
                 this.salvarMemoriaLocal();
             });
         },
+        
         async autorizarAcao(permissaoNecessaria, callbackSucesso) {
             if (this.usuario?.permissoes?.admin || this.usuario?.permissoes[permissaoNecessaria]) {
                 if (this.usuario.preferencias.biometriaAtiva && this.biometriaDisponivel) { 
-                    const ok = await this.verificarBiometriaLocal(); if (ok) return callbackSucesso(); 
+                    const ok = await this.verificarBiometriaLocal(); 
+                    if (ok) return callbackSucesso(); 
                 }
                 return callbackSucesso();
             } else {
                 this.vibrar([100, 50, 100]);
                 Swal.fire({ 
-                    title: '🔒 PIN de Admin:', input: 'password', 
+                    title: '🔒 PIN de Admin:', 
+                    input: 'password', 
                     inputAttributes: { inputmode: 'numeric', maxlength: 4, style: 'text-align: center; letter-spacing: 5px; font-size: 1.5rem; background: #111; color: #FFF;' }, 
                     showCancelButton: true, confirmButtonText: 'Autorizar', background: '#1E1E1E', color: '#FFF' 
                 }).then((result) => {
                     if (result.isConfirmed) {
                         const admin = this.equipe.find(u => u.pin === result.value && u.permissoes.admin);
-                        if (admin) { this.vibrar([50, 50]); this.registrarHistorico('Autorização', 'Segurança', `Admin ${admin.nome}`); callbackSucesso(); } 
-                        else { Swal.fire({ icon: 'error', title: 'Incorreto', background: '#1E1E1E', color: '#FFF' }); }
+                        if (admin) { 
+                            this.vibrar([50, 50]); 
+                            this.registrarHistorico('Autorização', 'Segurança', `Admin ${admin.nome}`); 
+                            callbackSucesso(); 
+                        } else { 
+                            Swal.fire({ icon: 'error', title: 'Incorreto', background: '#1E1E1E', color: '#FFF' }); 
+                        }
                     }
                 });
             }
         },
+        
         salvarMemoriaLocal() {
             const dados = { 
-                metas: this.metas, avisos: this.avisos, rotasSalvas: this.rotasSalvas, 
-                equipe: this.equipe, historicoGlobais: this.historicoGlobais, 
-                estoqueMassasHoje: this.estoqueMassasHoje, dataEstoqueMassas: this.dataEstoqueMassas, 
-                carrinhoInsumos: this.carrinhoInsumos, carrinhoSacolao: this.carrinhoSacolao, 
-                bancoProdutos: this.bancoProdutos, bancoChecklists: this.bancoChecklists, 
-                tarefasConcluidas: this.tarefasConcluidas, feriados: this.feriados, 
-                feedbacks: this.feedbacks, pedidosResetSenha: this.pedidosResetSenha 
+                metas: this.metas, 
+                avisos: this.avisos, 
+                rotasSalvas: this.rotasSalvas, 
+                equipe: this.equipe, 
+                historicoGlobais: this.historicoGlobais, 
+                estoqueMassasHoje: this.estoqueMassasHoje, 
+                dataEstoqueMassas: this.dataEstoqueMassas, 
+                carrinhoInsumos: this.carrinhoInsumos, 
+                carrinhoSacolao: this.carrinhoSacolao, 
+                bancoProdutos: this.bancoProdutos, 
+                bancoChecklists: this.bancoChecklists, 
+                tarefasConcluidas: this.tarefasConcluidas, 
+                feriados: this.feriados, 
+                feedbacks: this.feedbacks, 
+                pedidosResetSenha: this.pedidosResetSenha 
             };
             localStorage.setItem('pizzaMasterOfflineData', JSON.stringify(dados));
         },
+        
         carregarMemoriaLocal() {
             const salvo = localStorage.getItem('pizzaMasterOfflineData');
-            if (salvo) { try { Object.assign(this, JSON.parse(salvo)); } catch(e) {} }
+            if (salvo) { 
+                try { Object.assign(this, JSON.parse(salvo)); } catch(e) {} 
+            }
         },
         
-        // 🟢 FIREBASE: REGISTO DE HISTÓRICO GLOBAL
         registrarHistorico(acao, setor, detalhes = '') {
             if (!this.usuario) return; 
             const agora = new Date();
@@ -179,20 +254,22 @@ const app = new Vue({
             this.historicoGlobais.unshift({ 
                 id: Date.now(), 
                 usuario: this.usuario.nome, 
-                acao, 
-                setor, 
-                detalhes, 
+                acao: acao, 
+                setor: setor, 
+                detalhes: detalhes, 
                 dataStr: agora.toLocaleDateString('pt-BR'), 
                 horaStr: agora.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) 
             });
             
-            if (this.historicoGlobais.length > 300) this.historicoGlobais.pop();
+            if (this.historicoGlobais.length > 300) {
+                this.historicoGlobais.pop();
+            }
             this.salvarMemoriaLocal();
 
-            // Grava na Nuvem em tempo real!
+            // Grava na Nuvem em tempo real
             db.collection("operacao").doc("historico").set({ itens: this.historicoGlobais }, { merge: true });
         },
-
+        
         async buscarClima() {
             try {
                 const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=-23.3103&longitude=-51.1628&current_weather=true&timezone=America/Sao_Paulo`);
@@ -201,11 +278,17 @@ const app = new Vue({
                     this.clima.temperatura = Math.round(data.current_weather.temperature); 
                     this.clima.isCalor = this.clima.temperatura >= 27; 
                 }
-            } catch (e) { this.clima.temperatura = 'Off'; }
+            } catch (e) { 
+                this.clima.temperatura = 'Off'; 
+            }
         },
+        
         verificarLocalizacao() {
             if ("geolocation" in navigator) { 
-                navigator.geolocation.getCurrentPosition(() => { this.naPizzaria = true; }, () => { this.naPizzaria = false; }); 
+                navigator.geolocation.getCurrentPosition(
+                    () => { this.naPizzaria = true; }, 
+                    () => { this.naPizzaria = false; }
+                ); 
             }
         }
     },
@@ -214,18 +297,27 @@ const app = new Vue({
         this.buscarClima(); 
         this.verificarLocalizacao();
         
-        if (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true) { this.estaInstalado = true; }
-        if (window.PublicKeyCredential) { this.biometriaDisponivel = true; }
+        if (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true) { 
+            this.estaInstalado = true; 
+        }
+        if (window.PublicKeyCredential) { 
+            this.biometriaDisponivel = true; 
+        }
         
-        window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); this.eventoInstalacao = e; this.estaInstalado = false; });
+        window.addEventListener('beforeinstallprompt', (e) => { 
+            e.preventDefault(); 
+            this.eventoInstalacao = e; 
+            this.estaInstalado = false; 
+        });
+        
         history.pushState({ tela: this.viewAtual }, ""); 
         window.onpopstate = this.lidarComBotaoVoltar;
 
-        // 🟢 ESCUTA O HISTÓRICO DA NUVEM PARA INICIAR IGUAL PARA TODOS
+        // Puxa o histórico do Firebase para sincronizar os telemóveis
         db.collection("operacao").doc("historico").onSnapshot((doc) => {
-            if(doc.exists) {
-                this.historicoGlobais = doc.data().itens || [];
-                this.salvarMemoriaLocal();
+            if(doc.exists) { 
+                this.historicoGlobais = doc.data().itens || []; 
+                this.salvarMemoriaLocal(); 
             }
         });
     },
