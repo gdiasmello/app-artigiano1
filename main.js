@@ -1,4 +1,4 @@
-// INÍCIO DO ARQUIVO main.js - v2.0.7
+// INÍCIO DO ARQUIVO main.js - v2.0.9
 const firebaseConfig = { 
     apiKey: "AIzaSyBL70gtkhjBvC9BiKvz5HBivH07JfRKuo4", 
     authDomain: "artigiano-app.firebaseapp.com", 
@@ -14,6 +14,7 @@ if (!firebase.apps.length) {
 }
 const db = firebase.firestore();
 
+// 🟢 ESCUDO ANTI-FALHAS CRÍTICAS
 window.onerror = function(msg, url, line, col, error) { 
     return false; 
 };
@@ -28,12 +29,13 @@ Vue.config.errorHandler = function (err, vm, info) {
     }
 };
 
+// 🟢 APLICAÇÃO PRINCIPAL (CÉREBRO)
 const app = new Vue({
     el: '#app',
     data: {
-        versaoApp: '2.0.7', 
+        versaoApp: '2.0.9', 
         viewAtual: 'tela-login', 
-        carregandoDados: true, // 🟢 TELA DE CARREGAMENTO ATIVADA
+        carregandoDados: true, // Bloqueia a tela de login até a nuvem responder
         usuario: null, 
         naPizzaria: false, 
         estaInstalado: false, 
@@ -105,7 +107,9 @@ const app = new Vue({
         
         marcarNovidadesLidas() {
             if (!this.usuario) return;
+            // Força a atualização reativa na tela
             this.$set(this.usuario, 'versaoVista', this.versaoApp);
+            
             const idx = this.equipe.findIndex(u => u.id === this.usuario.id);
             if (idx !== -1) {
                 this.$set(this.equipe[idx], 'versaoVista', this.versaoApp);
@@ -252,13 +256,13 @@ const app = new Vue({
         history.pushState({ tela: this.viewAtual }, "");
         window.onpopstate = this.lidarComBotaoVoltar;
 
-        // 🟢 A MÁGICA DE DESBLOQUEIO
+        // 🟢 SINCRONIZAÇÃO EM TEMPO REAL E DESBLOQUEIO DO APP
         db.collection("configuracoes").doc("equipe").onSnapshot(d => { 
             if(d.exists) { 
                 this.equipe = d.data().lista || []; 
                 this.salvarMemoriaLocal(); 
             } 
-            // Liberta o Login para o utilizador assim que baixa a equipe
+            // A mágica acontece aqui: A tela de login é liberada assim que a equipe é baixada!
             this.carregandoDados = false; 
         });
         
