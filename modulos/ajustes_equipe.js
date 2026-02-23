@@ -1,203 +1,271 @@
-// INÍCIO DO ARQUIVO modulos/ajustes_equipe.js - v1.0.7
+// INÍCIO DO ARQUIVO modulos/ajustes_equipe.js - v2.1.2
 Vue.component('tela-ajustes-equipe', {
     template: `
     <div class="container animate__animated animate__fadeInRight" v-if="$root.usuario" style="padding-bottom: 100px;">
         
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-            <h2 style="margin: 0; color: #D50000;">👥 Equipe</h2>
-            <button @click="voltar" style="background: none; border: none; color: var(--text-sec); font-size: 1.5rem;"><i class="fas fa-arrow-left"></i></button>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px;">
+            <h2 style="margin: 0; color: #FF5252;"><i class="fas fa-users-cog"></i> Gestão de Equipe</h2>
+            <button @click="$root.mudarTela('tela-ajustes')" style="background: none; border: none; color: #AAA; font-size: 1.5rem; cursor: pointer;">
+                <i class="fas fa-arrow-left"></i>
+            </button>
         </div>
 
-        <div v-if="modo === 'lista'">
-            <button @click="abrirNovo" class="btn" style="background: #D50000; color: white; margin-bottom: 20px;">
-                <i class="fas fa-user-plus"></i> ADICIONAR FUNCIONÁRIO
-            </button>
-
-            <div v-for="m in $root.equipe" :key="m.id" class="card" style="padding: 15px; display: flex; justify-content: space-between; align-items: center; border-left: 4px solid #444;" :style="m.permissoes.admin ? 'border-color: #FF5252;' : ''">
-                
-                <div @click="editar(m)" style="flex: 1; cursor: pointer;">
-                    <strong style="color: white; font-size: 1.1rem; display: block;">
-                        <i v-if="m.permissoes.admin" class="fas fa-crown" style="color: #FF5252; font-size: 0.8rem; margin-right: 5px;"></i>
-                        {{ m.nome }}
-                    </strong>
-                    
-                    <div style="display: flex; gap: 8px; align-items: center; margin-top: 5px; flex-wrap: wrap;">
-                        <span style="background: #333; color: #AAA; padding: 2px 8px; border-radius: 4px; font-size: 0.7rem; font-weight: bold;">{{ m.cargo }}</span>
-                        
-                        <span v-if="m.pin === '1234'" style="background: #FFAB00; color: #000; padding: 2px 8px; border-radius: 4px; font-size: 0.7rem; font-weight: bold;">PENDENTE SETUP</span>
-                        
-                        <span v-if="m.termoAceito" style="background: rgba(0,230,118,0.1); color: #00E676; border: 1px solid #00E676; padding: 2px 8px; border-radius: 4px; font-size: 0.7rem; font-weight: bold;">
-                            <i class="fas fa-file-signature"></i> TERMO OK
-                        </span>
-                    </div>
+        <div v-if="$root.pedidosResetSenha && $root.pedidosResetSenha.length > 0" class="card animate__animated animate__pulse" style="padding: 20px; border-left: 4px solid #FFAB00; margin-bottom: 20px; background: rgba(255, 171, 0, 0.1);">
+            <h4 style="margin-top: 0; color: #FFAB00;"><i class="fas fa-key"></i> Pedidos de Reset de Senha</h4>
+            <div v-for="(pedido, idx) in $root.pedidosResetSenha" :key="pedido.id" style="display: flex; justify-content: space-between; align-items: center; background: #222; padding: 10px; border-radius: 8px; margin-bottom: 8px;">
+                <div>
+                    <strong style="color: white; text-transform: capitalize;">{{ pedido.nome }}</strong>
+                    <span style="color: #888; font-size: 0.8rem; display: block;">Solicitado em: {{ pedido.dataStr }}</span>
                 </div>
-                
-                <div style="display: flex; gap: 15px;">
-                    <button v-if="m.termoAceito" @click="gerarPDF(m)" style="background: none; border: none; color: #FFF; font-size: 1.2rem;"><i class="fas fa-file-pdf"></i></button>
-                    <button @click="editar(m)" style="background: none; border: none; color: #00B0FF; font-size: 1.2rem;"><i class="fas fa-edit"></i></button>
+                <div style="display: flex; gap: 10px;">
+                    <button @click="aprovarReset(pedido, idx)" style="background: #00E676; color: #121212; border: none; padding: 8px 12px; border-radius: 6px; font-weight: bold; cursor: pointer;">Aprovar</button>
+                    <button @click="negarReset(idx)" style="background: #FF5252; color: white; border: none; padding: 8px 12px; border-radius: 6px; font-weight: bold; cursor: pointer;">Negar</button>
                 </div>
             </div>
         </div>
 
-        <div v-else class="card animate__animated animate__fadeInUp" style="border-top: 4px solid #D50000; padding: 20px;">
-            <h3 style="color: white; margin-top: 0;">{{ editandoId ? 'Editar Permissões' : 'Novo Funcionário' }}</h3>
+        <div class="card" style="padding: 20px; border-top: 4px solid #FF5252; margin-bottom: 20px;">
+            <h4 style="margin-top: 0; color: white; margin-bottom: 20px;"><i class="fas fa-user-plus"></i> Novo Funcionário</h4>
             
-            <label class="label-ia">Nome Curto (Login)</label>
-            <input type="text" v-model="form.nome" placeholder="Ex: João" class="input-dark" style="margin-bottom: 15px;" />
+            <label class="label-form">NOME CURTO (Para Login)</label>
+            <input type="text" v-model="novoNome" placeholder="Ex: vitor" class="input-form">
             
-            <label class="label-ia">Cargo / Função</label>
-            <select v-model="form.cargo" @change="autoAjustarPermissoes" class="input-dark" style="margin-bottom: 25px;">
-                <option value="Administrador">Administrador</option>
-                <option value="Gerente">Gerente</option>
-                <option value="Pizzaiolo">Pizzaiolo</option>
+            <label class="label-form">CARGO / FUNÇÃO (Preenche permissões automaticamente)</label>
+            <select v-model="novoCargo" class="input-form">
                 <option value="Atendente">Atendente</option>
+                <option value="Pizzaiolo">Pizzaiolo</option>
+                <option value="Auxiliar">Auxiliar</option>
+                <option value="Gerente">Gerente / Admin</option>
             </select>
 
-            <h4 style="color: #FF5252; border-bottom: 1px solid #333; padding-bottom: 10px; margin-bottom: 15px;">Acessos Liberados</h4>
-            
-            <div style="display: grid; grid-template-columns: 1fr; gap: 10px;">
-                <div v-for="(val, chave) in listaPermissoes" :key="chave" @click="form.permissoes[chave] = !form.permissoes[chave]" style="display: flex; align-items: center; gap: 15px; background: #222; padding: 12px; border-radius: 8px; cursor: pointer; border: 1px solid #333;" :style="form.permissoes.admin && chave !== 'admin' ? 'opacity: 0.5; pointer-events: none;' : ''">
-                    <div style="width: 40px; height: 22px; background: #444; border-radius: 20px; position: relative; transition: 0.3s;" :style="form.permissoes[chave] || form.permissoes.admin ? 'background: #00E676;' : ''">
-                        <div style="width: 16px; height: 16px; background: white; border-radius: 50%; position: absolute; top: 3px; left: 3px; transition: 0.3s;" :style="form.permissoes[chave] || form.permissoes.admin ? 'left: 21px;' : ''"></div>
-                    </div>
-                    <span style="color: #EEE; font-size: 0.9rem;">
-                        {{ val }}
-                        <span v-if="form.permissoes.admin && chave !== 'admin'" style="color: #00E676; font-size: 0.7rem; margin-left: 5px;">(Incluído)</span>
-                    </span>
+            <div style="background: #1A1A1A; border: 1px solid #333; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+                <label class="label-form" style="margin-bottom: 10px; color: #00E676;"><i class="fas fa-lock-open"></i> PERMISSÕES DE ACESSO</label>
+                
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                    <label class="checkbox-label"><input type="checkbox" v-model="novasPermissoes.producao"> Produção (Massa)</label>
+                    <label class="checkbox-label"><input type="checkbox" v-model="novasPermissoes.pedidos"> Fazer Pedidos</label>
+                    <label class="checkbox-label"><input type="checkbox" v-model="novasPermissoes.limpeza"> Limpeza</label>
+                    <label class="checkbox-label"><input type="checkbox" v-model="novasPermissoes.historico"> Ver Auditoria</label>
+                    <label class="checkbox-label"><input type="checkbox" v-model="novasPermissoes.avisos"> Criar Avisos</label>
+                    <label class="checkbox-label"><input type="checkbox" v-model="novasPermissoes.gerenciar"> Editar Produtos</label>
+                    <label class="checkbox-label" style="grid-column: span 2; color: #FF5252; font-weight: bold;">
+                        <input type="checkbox" v-model="novasPermissoes.admin"> Administrador Total
+                    </label>
                 </div>
             </div>
 
-            <div style="display: flex; gap: 10px; margin-top: 25px;">
-                <button @click="modo = 'lista'" class="btn" style="background: #444; color: white; flex: 1;">CANCELAR</button>
-                <button @click="salvar" class="btn" style="background: #D50000; color: white; flex: 2;">SALVAR DADOS</button>
-            </div>
+            <button @click="adicionarMembro" class="btn" style="background: #FF5252; color: white; font-weight: bold; height: 55px;">
+                CADASTRAR E SINCRONIZAR
+            </button>
+        </div>
+
+        <h4 style="color: #AAA; margin-bottom: 10px; font-size: 0.9rem;">EQUIPE ATUAL ({{ $root.equipe.length }})</h4>
+        
+        <div v-for="(membro, idx) in $root.equipe" :key="membro.id" class="card" style="padding: 15px; margin-bottom: 10px; border-left: 4px solid #444;">
             
-            <button v-if="editandoId && editandoId !== $root.usuario.id" @click="apagar(editandoId)" class="btn" style="background: none; border: 1px dashed #FF5252; color: #FF5252; margin-top: 15px;">EXCLUIR FUNCIONÁRIO</button>
+            <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                <div>
+                    <strong style="color: white; font-size: 1.1rem; display: block; text-transform: capitalize;">{{ membro.nome }}</strong>
+                    <span style="color: #888; font-size: 0.85rem; display: block; margin-top: 3px;">Cargo: {{ membro.cargo }}</span>
+                    <span style="color: #888; font-size: 0.85rem; display: block; margin-top: 3px;">PIN: <b style="color: #FFAB00; letter-spacing: 2px;">{{ membro.pin }}</b></span>
+                    
+                    <span v-if="membro.termoAceito" style="color: #00E676; font-size: 0.75rem; display: block; margin-top: 5px;">
+                        <i class="fas fa-check-circle"></i> Termo assinado
+                    </span>
+                    <span v-else style="color: #FF5252; font-size: 0.75rem; display: block; margin-top: 5px;">
+                        <i class="fas fa-clock"></i> Pendente assinatura
+                    </span>
+                </div>
+                
+                <div style="display: flex; gap: 10px;" v-if="membro.id !== $root.usuario.id && membro.id !== 'master_key'">
+                    <button @click="toggleEditarPermissoes(membro.id)" style="background: #2962FF; border: none; color: white; width: 40px; height: 40px; border-radius: 8px; cursor: pointer;" title="Editar Permissões">
+                        <i class="fas fa-user-shield"></i>
+                    </button>
+                    <button @click="resetarPin(membro)" style="background: #333; border: 1px solid #555; color: white; width: 40px; height: 40px; border-radius: 8px; cursor: pointer;" title="Resetar PIN para 1234">
+                        <i class="fas fa-undo"></i>
+                    </button>
+                    <button @click="removerMembro(idx)" style="background: rgba(255,82,82,0.1); border: 1px solid #FF5252; color: #FF5252; width: 40px; height: 40px; border-radius: 8px; cursor: pointer;" title="Excluir">
+                        <i class="fas fa-trash-alt"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div v-if="editandoId === membro.id" class="animate__animated animate__fadeIn" style="margin-top: 15px; padding-top: 15px; border-top: 1px dashed #444;">
+                <label style="color: #00B0FF; font-size: 0.8rem; font-weight: bold; display: block; margin-bottom: 10px;">EDITAR ACESSOS DE {{ membro.nome.toUpperCase() }}</label>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 15px;">
+                    <label class="checkbox-label"><input type="checkbox" v-model="membro.permissoes.producao"> Produção</label>
+                    <label class="checkbox-label"><input type="checkbox" v-model="membro.permissoes.pedidos"> Pedidos</label>
+                    <label class="checkbox-label"><input type="checkbox" v-model="membro.permissoes.limpeza"> Limpeza</label>
+                    <label class="checkbox-label"><input type="checkbox" v-model="membro.permissoes.historico"> Auditoria</label>
+                    <label class="checkbox-label"><input type="checkbox" v-model="membro.permissoes.avisos"> Avisos</label>
+                    <label class="checkbox-label"><input type="checkbox" v-model="membro.permissoes.gerenciar"> Edição ERP</label>
+                    <label class="checkbox-label" style="grid-column: span 2; color: #FF5252;"><input type="checkbox" v-model="membro.permissoes.admin"> Admin Total</label>
+                </div>
+                <button @click="salvarEdicao(membro)" class="btn" style="background: #00B0FF; color: white; font-weight: bold;">
+                    SALVAR ALTERAÇÕES
+                </button>
+            </div>
+
         </div>
     </div>
     `,
     data() {
         return {
-            modo: 'lista',
-            editandoId: null,
-            form: {
-                nome: '', cargo: 'Atendente', pin: '1234', 
-                nomeCompleto: '', nascimento: '', termoAceito: false, dataTermoAceito: '',
-                permissoes: { admin: false, producao: false, pedidos: false, limpeza: true, gerenciar: false, historico: false, avisos: false, adicionar: false, remover: false },
-                preferencias: { vibracao: true, biometriaAtiva: false, saudacaoZap: '', despedidaZap: 'Obrigado.' }
+            novoNome: '',
+            novoCargo: 'Atendente',
+            novasPermissoes: {
+                producao: false, pedidos: true, limpeza: true, historico: false, avisos: false, gerenciar: false, admin: false
             },
-            listaPermissoes: {
-                admin: 'Admin (Acesso Total)', producao: 'Ver Produção', pedidos: 'Fazer Pedidos (Compras)', limpeza: 'Ver Limpeza',
-                gerenciar: 'Gerenciar ERP', historico: 'Ver Auditoria', avisos: 'Mural Avisos', adicionar: 'Adicionar Itens', remover: 'Apagar Itens'
-            }
+            editandoId: null
         };
     },
-    mounted() {
-        db.collection("configuracoes").doc("equipe").onSnapshot((doc) => {
-            if (doc.exists) {
-                this.$root.equipe = doc.data().lista;
-                this.$root.salvarMemoriaLocal();
+    watch: {
+        // Preenche automaticamente as permissões quando o Gerente troca o cargo no select
+        novoCargo(cargo) {
+            if (cargo === 'Gerente') {
+                this.novasPermissoes = { producao: true, pedidos: true, limpeza: true, historico: true, avisos: true, gerenciar: true, admin: true };
+            } else if (cargo === 'Pizzaiolo') {
+                this.novasPermissoes = { producao: true, pedidos: true, limpeza: true, historico: false, avisos: false, gerenciar: false, admin: false };
+            } else if (cargo === 'Atendente') {
+                this.novasPermissoes = { producao: false, pedidos: true, limpeza: true, historico: false, avisos: false, gerenciar: false, admin: false };
+            } else { // Auxiliar
+                this.novasPermissoes = { producao: false, pedidos: false, limpeza: true, historico: false, avisos: false, gerenciar: false, admin: false };
             }
-        });
-        
-        if (!document.getElementById('css-eqp-v107')) {
-            const style = document.createElement('style');
-            style.id = 'css-eqp-v107';
-            style.innerHTML = `
-                .input-dark { width: 100%; padding: 12px; background: #2C2C2C; border: 1px solid #444; border-radius: 8px; color: white; font-size: 1rem; box-sizing: border-box; }
-                .input-dark:focus { border-color: #D50000; outline: none; }
-                .label-ia { color: #AAA; font-size: 0.8rem; font-weight: bold; margin-bottom: 5px; display: block; }
-            `;
-            document.head.appendChild(style);
         }
     },
     methods: {
-        voltar() {
-            if (this.modo !== 'lista') this.modo = 'lista';
-            else this.$root.mudarTela('tela-ajustes');
-        },
-        abrirNovo() {
-            this.editandoId = null;
-            this.form = {
-                nome: '', cargo: 'Atendente', pin: '1234', nomeCompleto: '', nascimento: '', termoAceito: false, dataTermoAceito: '',
-                permissoes: { admin: false, producao: false, pedidos: false, limpeza: true, gerenciar: false, historico: false, avisos: false, adicionar: false, remover: false },
-                preferencias: { vibracao: true, biometriaAtiva: false, saudacaoZap: '', despedidaZap: 'Obrigado.' }
-            };
-            this.modo = 'form';
-        },
-        editar(m) {
-            this.editandoId = m.id;
-            this.form = JSON.parse(JSON.stringify(m));
-            this.modo = 'form';
-        },
-        autoAjustarPermissoes() {
-            if (this.form.cargo === 'Administrador') {
-                this.form.permissoes.admin = true;
-            } else if (this.form.permissoes.admin) {
-                this.form.permissoes.admin = false;
+        adicionarMembro() {
+            if (!this.novoNome.trim()) {
+                Swal.fire({ icon: 'warning', text: 'Preencha o nome do funcionário.', background: '#1E1E1E', color: '#FFF' });
+                return;
             }
-        },
-        salvar() {
-            if (!this.form.nome.trim()) return;
+
+            const nomeLimpo = this.novoNome.trim().toLowerCase();
             
-            this.$root.autorizarAcao('admin', () => {
-                if (this.editandoId) {
-                    const i = this.$root.equipe.findIndex(u => u.id === this.editandoId);
-                    
-                    this.form.nomeCompleto = this.$root.equipe[i].nomeCompleto || '';
-                    this.form.nascimento = this.$root.equipe[i].nascimento || '';
-                    this.form.termoAceito = this.$root.equipe[i].termoAceito || false;
-                    this.form.dataTermoAceito = this.$root.equipe[i].dataTermoAceito || '';
-                    this.form.pin = this.$root.equipe[i].pin || '1234';
-                    
-                    this.$root.equipe[i] = { ...this.form };
-                } else {
-                    this.$root.equipe.push({ ...this.form, id: Date.now() });
-                }
-                
-                db.collection("configuracoes").doc("equipe").set({ lista: this.$root.equipe }, { merge: true });
-                this.$root.salvarMemoriaLocal();
-                this.modo = 'lista';
-                Swal.fire({ icon: 'success', title: 'Salvo!', text: 'Senha do novo funcionário é 1234', timer: 1500, showConfirmButton: false, background: '#1E1E1E' });
-            });
+            if (this.$root.equipe.find(u => u.nome === nomeLimpo)) {
+                Swal.fire({ icon: 'error', title: 'Atenção', text: 'Já existe um funcionário com esse nome!', background: '#1E1E1E', color: '#FFF' });
+                return;
+            }
+            
+            const novo = {
+                id: Date.now().toString(),
+                nome: nomeLimpo,
+                cargo: this.novoCargo,
+                pin: '1234',
+                termoAceito: false,
+                // Clona as permissões exatamente como o gerente deixou nos checkboxes
+                permissoes: JSON.parse(JSON.stringify(this.novasPermissoes)) 
+            };
+
+            this.$root.equipe.push(novo);
+            this.novoNome = '';
+            
+            // Sincroniza imediatamente na nuvem com aviso de sucesso
+            this.salvarNuvem(true, 'Funcionário cadastrado e enviado para a nuvem automaticamente!');
         },
-        apagar(id) {
-            Swal.fire({ title: 'Excluir?', icon: 'warning', showCancelButton: true, confirmButtonColor: '#FF5252', background: '#1E1E1E', color: '#FFF' }).then((r) => {
+
+        removerMembro(idx) {
+            Swal.fire({
+                title: 'Remover funcionário?', 
+                text: 'Ele perderá acesso ao sistema na mesma hora.', 
+                icon: 'warning', 
+                showCancelButton: true, 
+                confirmButtonColor: '#FF5252', 
+                cancelButtonColor: '#444',
+                confirmButtonText: 'Sim, Remover',
+                background: '#1E1E1E', 
+                color: '#FFF'
+            }).then((r) => {
                 if (r.isConfirmed) {
-                    this.$root.equipe = this.$root.equipe.filter(u => u.id !== id);
-                    db.collection("configuracoes").doc("equipe").set({ lista: this.$root.equipe }, { merge: true });
-                    this.$root.salvarMemoriaLocal();
-                    this.modo = 'lista';
+                    this.$root.equipe.splice(idx, 1);
+                    // Salva na nuvem silenciosamente
+                    this.salvarNuvem(false); 
                 }
             });
         },
-        gerarPDF(m) {
-            this.$root.vibrar(30);
-            const tela = window.open('', '_blank');
-            tela.document.write(`
-                <html><head><title>Termo de Uso - ${m.nomeCompleto}</title></head>
-                <body style="font-family: Arial, sans-serif; padding: 40px; line-height: 1.6; color: #000;">
-                    <div style="text-align: center; margin-bottom: 40px;">
-                        <h1 style="margin: 0;">PIZZA MASTER GESTÃO</h1>
-                        <h3 style="margin: 5px 0; color: #555;">Termo de Isenção de Responsabilidade Operacional</h3>
-                    </div>
-                    <p style="text-align: justify; font-size: 1.1rem;">
-                        Eu, <b>${m.nomeCompleto || m.nome}</b>, portador da data de nascimento <b>${m.nascimento || 'Não informada'}</b>, declaro que compreendo e aceito os termos operacionais ao utilizar o aplicativo de gestão da pizzaria.<br><br>
-                        Comprometo-me a realizar as contagens de estoque, produção e registos com a máxima atenção. Declaro para os devidos fins legais que o desenvolvedor do aplicativo, <b>Gabriel</b>, está total e inteiramente isento de qualquer responsabilidade sobre erros de contagem, pedidos de compras incorretos gerados pelo app, perdas financeiras ou quebras de estoque na operação.<br><br>
-                        Declaro ainda ter ciência de que o aplicativo é uma ferramenta de software independente e <b>não possui qualquer vínculo legal, societário ou trabalhista com a pizzaria</b>, servindo apenas como facilitador de cálculos e registos.<br><br>
-                        Reconheço que todas as minhas interações no sistema são registadas digitalmente na Auditoria.
-                    </p>
-                    <br><br><br><br>
-                    <div style="text-align: center; margin-top: 50px;">
-                        ______________________________________________________________<br><br>
-                        <b>${m.nomeCompleto || m.nome}</b><br>
-                        <small>Assinatura Eletrônica registrada pelo sistema em: ${m.dataTermoAceito}</small><br>
-                        <small>ID de Registo na Nuvem: ${m.id}</small>
-                    </div>
-                    <script>setTimeout(function(){ window.print(); window.close(); }, 1000);</script>
-                </body></html>
-            `);
-            tela.document.close();
+        
+        resetarPin(membro) {
+            Swal.fire({
+                title: 'Resetar PIN?', 
+                text: 'A senha voltará a ser 1234 e ele terá de assinar o termo novamente.', 
+                icon: 'question', 
+                showCancelButton: true, 
+                confirmButtonColor: '#00E676', 
+                cancelButtonColor: '#444',
+                confirmButtonText: 'Sim, Resetar',
+                background: '#1E1E1E', 
+                color: '#FFF'
+            }).then((r) => {
+                if (r.isConfirmed) {
+                    membro.pin = '1234';
+                    membro.termoAceito = false;
+                    this.salvarNuvem(true, 'PIN resetado e sincronizado com a nuvem.');
+                }
+            });
+        },
+
+        toggleEditarPermissoes(id) {
+            this.editandoId = this.editandoId === id ? null : id;
+        },
+
+        salvarEdicao(membro) {
+            this.editandoId = null;
+            this.salvarNuvem(true, `Permissões de ${membro.nome} atualizadas.`);
+        },
+
+        aprovarReset(pedido, idx) {
+            const usuario = this.$root.equipe.find(u => u.id === pedido.idUsuario);
+            if (usuario) {
+                usuario.pin = '1234';
+                usuario.termoAceito = false;
+            }
+            this.$root.pedidosResetSenha.splice(idx, 1);
+            db.collection("configuracoes").doc("loja").set({ pedidosResetSenha: this.$root.pedidosResetSenha }, { merge: true });
+            this.salvarNuvem(true, 'Senha resetada para 1234.');
+        },
+
+        negarReset(idx) {
+            this.$root.pedidosResetSenha.splice(idx, 1);
+            db.collection("configuracoes").doc("loja").set({ pedidosResetSenha: this.$root.pedidosResetSenha }, { merge: true });
+            this.$root.salvarMemoriaLocal();
+        },
+
+        // 🟢 A MÁGICA DA SINCRONIZAÇÃO INVISÍVEL
+        salvarNuvem(exibirAviso = false, mensagem = '') {
+            db.collection("configuracoes").doc("equipe").set({ lista: this.$root.equipe }, { merge: true })
+            .then(() => {
+                this.$root.salvarMemoriaLocal();
+                if (exibirAviso) {
+                    this.$root.vibrar(30);
+                    Swal.fire({
+                        icon: 'success', 
+                        title: 'Tudo Certo!', 
+                        text: mensagem,
+                        timer: 2000, 
+                        showConfirmButton: false, 
+                        background: '#1E1E1E', 
+                        color: '#FFF'
+                    });
+                }
+            })
+            .catch(err => {
+                Swal.fire('Erro de Conexão', 'Problema na internet: ' + err.message, 'error');
+            });
+        }
+    },
+    mounted() {
+        // Estilos para o formulário e checkboxes
+        if (!document.getElementById('css-equipe-v2')) {
+            const style = document.createElement('style'); 
+            style.id = 'css-equipe-v2';
+            style.innerHTML = `
+                .label-form { color: #888; font-size: 0.8rem; font-weight: bold; margin-bottom: 5px; display: block; letter-spacing: 0.5px; }
+                .input-form { width: 100%; margin-bottom: 20px; padding: 15px; border-radius: 8px; border: 1px solid #444; background: #222; color: white; box-sizing: border-box; font-size: 1rem; outline: none; }
+                .input-form:focus { border-color: #FF5252; }
+                .checkbox-label { color: white; font-size: 0.9rem; display: flex; align-items: center; gap: 8px; cursor: pointer; }
+                .checkbox-label input[type="checkbox"] { transform: scale(1.3); cursor: pointer; accent-color: #00E676; }
+            `;
+            document.head.appendChild(style);
         }
     }
 });
