@@ -1,4 +1,4 @@
-// INÍCIO DO ARQUIVO main.js - v2.0.5
+// INÍCIO DO ARQUIVO main.js - v2.0.7
 const firebaseConfig = { 
     apiKey: "AIzaSyBL70gtkhjBvC9BiKvz5HBivH07JfRKuo4", 
     authDomain: "artigiano-app.firebaseapp.com", 
@@ -31,8 +31,9 @@ Vue.config.errorHandler = function (err, vm, info) {
 const app = new Vue({
     el: '#app',
     data: {
-        versaoApp: '2.0.5', 
+        versaoApp: '2.0.7', 
         viewAtual: 'tela-login', 
+        carregandoDados: true, // 🟢 TELA DE CARREGAMENTO ATIVADA
         usuario: null, 
         naPizzaria: false, 
         estaInstalado: false, 
@@ -102,13 +103,9 @@ const app = new Vue({
             }
         },
         
-        // 🟢 CORREÇÃO: O BOTÃO AGORA SOME INSTANTANEAMENTE
         marcarNovidadesLidas() {
             if (!this.usuario) return;
-            
-            // Força a tela a atualizar imediatamente com o $set
             this.$set(this.usuario, 'versaoVista', this.versaoApp);
-            
             const idx = this.equipe.findIndex(u => u.id === this.usuario.id);
             if (idx !== -1) {
                 this.$set(this.equipe[idx], 'versaoVista', this.versaoApp);
@@ -165,12 +162,12 @@ const app = new Vue({
         
         carregarMemoriaLocal() {
             const data = localStorage.getItem('pizzaMasterOffline');
-            if (data) {
+            if (data) { 
                 try { 
                     Object.assign(this, JSON.parse(data)); 
-                } catch(e) {
-                    console.error(e);
-                }
+                } catch(e) { 
+                    console.error(e); 
+                } 
             }
         },
 
@@ -188,7 +185,7 @@ const app = new Vue({
         },
         
         verificarLocalizacao() { 
-            if ("geolocation" in navigator) {
+            if ("geolocation" in navigator) { 
                 navigator.geolocation.getCurrentPosition(() => this.naPizzaria = true, () => this.naPizzaria = false); 
             }
         },
@@ -255,22 +252,32 @@ const app = new Vue({
         history.pushState({ tela: this.viewAtual }, "");
         window.onpopstate = this.lidarComBotaoVoltar;
 
-        // 🟢 LIGAÇÕES EM TEMPO REAL COM O FIREBASE
+        // 🟢 A MÁGICA DE DESBLOQUEIO
         db.collection("configuracoes").doc("equipe").onSnapshot(d => { 
-            if(d.exists) { this.equipe = d.data().lista || []; this.salvarMemoriaLocal(); } 
+            if(d.exists) { 
+                this.equipe = d.data().lista || []; 
+                this.salvarMemoriaLocal(); 
+            } 
+            // Liberta o Login para o utilizador assim que baixa a equipe
+            this.carregandoDados = false; 
         });
+        
         db.collection("configuracoes").doc("bancoProdutos").onSnapshot(d => { 
             if(d.exists) { this.bancoProdutos = d.data().lista || []; this.salvarMemoriaLocal(); } 
         });
+        
         db.collection("configuracoes").doc("rotas").onSnapshot(d => { 
             if(d.exists) { this.rotasSalvas = d.data().lista || []; this.salvarMemoriaLocal(); } 
         });
+        
         db.collection("configuracoes").doc("avisos").onSnapshot(d => { 
             if(d.exists) { this.avisos = d.data().lista || []; this.salvarMemoriaLocal(); } 
         });
+        
         db.collection("operacao").doc("historico").onSnapshot(d => { 
             if(d.exists) { this.historicoGlobais = d.data().itens || []; this.salvarMemoriaLocal(); } 
         });
+        
         db.collection("configuracoes").doc("loja").onSnapshot(d => { 
             if(d.exists) { 
                 const config = d.data(); 
