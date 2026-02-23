@@ -1,4 +1,4 @@
-// INÍCIO DO ARQUIVO modulos/login.js - v0.0.89
+// INÍCIO DO ARQUIVO modulos/login.js - v0.0.93
 Vue.component('tela-login', {
     template: `
     <div class="container animate__animated animate__fadeIn" style="display: flex; flex-direction: column; justify-content: center; min-height: 95vh;">
@@ -10,8 +10,8 @@ Vue.component('tela-login', {
         </div>
 
         <div v-if="etapa === 'padrao'" class="card animate__animated animate__fadeIn" style="padding: 25px; background: #1A1A1A; border: 1px solid #333;">
-            <label style="display: block; margin-bottom: 8px; color: #888; font-weight: bold; font-size: 0.8rem; text-align: center;">USUÁRIO</label>
-            <input type="text" v-model="nomeUsuario" placeholder="Seu nome" class="input-nativo" />
+            <label style="display: block; margin-bottom: 8px; color: #888; font-weight: bold; font-size: 0.8rem; text-align: center;">USUÁRIO (NOME CURTO)</label>
+            <input type="text" v-model="nomeUsuario" placeholder="Ex: João" class="input-nativo" />
 
             <label style="display: block; margin-bottom: 8px; color: #888; font-weight: bold; font-size: 0.8rem; text-align: center;">PIN DE ACESSO</label>
             <input type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" v-model="pin" placeholder="****" class="input-nativo" style="letter-spacing: 10px; font-size: 1.8rem; text-align: center;" @keyup.enter="verificarLogin" />
@@ -26,13 +26,15 @@ Vue.component('tela-login', {
         </div>
 
         <div v-if="etapa === 'primeiroAcesso'" class="card animate__animated animate__fadeInRight" style="padding: 25px; background: #1A1A1A; border-top: 4px solid #00E676;">
-            <h3 style="color: #00E676; text-align: center; margin-top: 0;">Criar Credenciais</h3>
-            <p style="color: #CCC; text-align: center; font-size: 0.85rem; margin-bottom: 20px;">Preencha os seus dados completos para registar o seu acesso no sistema.</p>
+            <h3 style="color: #00E676; text-align: center; margin-top: 0;">Bem-vindo, {{ usuarioTemp.nome }}!</h3>
+            <p style="color: #CCC; text-align: center; font-size: 0.85rem; margin-bottom: 20px;">
+                Como este é o seu primeiro acesso, precisamos que você cadastre a sua assinatura digital.
+            </p>
 
-            <label class="label-ia">NOME COMPLETO</label>
+            <label class="label-ia">NOME COMPLETO (REAL)</label>
             <input type="text" v-model="nomeCompleto" placeholder="Ex: João da Silva Santos" class="input-nativo" style="text-align: left; font-size: 1rem; letter-spacing: 0;" />
 
-            <label class="label-ia">NOVO PIN (4 DÍGITOS)</label>
+            <label class="label-ia">CRIE O SEU NOVO PIN (4 DÍGITOS)</label>
             <input type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" v-model="novoPin" placeholder="****" class="input-nativo" style="letter-spacing: 10px; font-size: 1.8rem;" />
 
             <label class="label-ia">DATA DE NASCIMENTO</label>
@@ -40,16 +42,16 @@ Vue.component('tela-login', {
 
             <div style="background: rgba(255, 171, 0, 0.1); padding: 15px; border-radius: 8px; border: 1px dashed #FFAB00; margin-top: 15px;">
                 <button @click="lerTermo" style="width: 100%; background: none; border: none; color: #FFAB00; font-weight: bold; margin-bottom: 10px; cursor: pointer; text-decoration: underline;">
-                    <i class="fas fa-file-contract"></i> LER TERMO DE RESPONSABILIDADE
+                    <i class="fas fa-file-contract"></i> LER TERMO DE ISENÇÃO
                 </button>
                 <label style="display: flex; align-items: center; gap: 10px; color: white; font-size: 0.85rem;">
                     <input type="checkbox" v-model="aceitouTermo" style="transform: scale(1.3);"> 
-                    Li e aceito os termos do sistema.
+                    Li e concordo com os termos.
                 </label>
             </div>
 
             <button @click="salvarNovoPerfil" class="btn" style="background: #00E676; color: #121212; margin-top: 15px; height: 55px; font-size: 1.1rem;">
-                SALVAR E ENTRAR
+                ASSINAR E ENTRAR
             </button>
         </div>
 
@@ -60,13 +62,13 @@ Vue.component('tela-login', {
             </div>
             
             <p style="color: #CCC; font-size: 0.9rem; margin-bottom: 20px;">
-                O Gerente irá autorizar o reset da sua senha no painel.
+                O Gerente será notificado e autorizará o reset para "1234".
             </p>
 
-            <input type="text" v-model="nomeRecuperacao" placeholder="Seu primeiro nome" class="input-nativo" />
+            <input type="text" v-model="nomeRecuperacao" placeholder="Seu Nome Curto" class="input-nativo" />
 
             <button @click="solicitarReset" class="btn" style="background: #FF5252; color: #FFF; height: 55px;">
-                ENVIAR SOLICITAÇÃO
+                SOLICITAR AUTORIZAÇÃO
             </button>
         </div>
     </div>
@@ -74,13 +76,8 @@ Vue.component('tela-login', {
     data() {
         return {
             etapa: 'padrao',
-            nomeUsuario: '',
-            pin: '',
-            usuarioTemp: null,
-            nomeCompleto: '',
-            novoPin: '',
-            dataNascimento: '',
-            aceitouTermo: false,
+            nomeUsuario: '', pin: '',
+            usuarioTemp: null, nomeCompleto: '', novoPin: '', dataNascimento: '', aceitouTermo: false,
             nomeRecuperacao: ''
         };
     },
@@ -91,6 +88,7 @@ Vue.component('tela-login', {
             const user = this.$root.equipe.find(x => x.nome.toLowerCase() === nomeDigitado && x.pin === this.pin);
             
             if (user) {
+                // 🟢 REGRA: SE A SENHA É 1234, VAI PARA O CADASTRO PESSOAL
                 if (user.pin === '1234') {
                     this.usuarioTemp = user;
                     this.nomeCompleto = user.nomeCompleto || '';
@@ -103,24 +101,23 @@ Vue.component('tela-login', {
             } else {
                 this.$root.vibrar([100, 50, 100]);
                 this.pin = '';
-                Swal.fire({ icon: 'error', title: 'Inválido', timer: 1500, showConfirmButton: false, background: '#1E1E1E' });
+                Swal.fire({ icon: 'error', title: 'Usuário Incorreto', timer: 1500, showConfirmButton: false, background: '#1E1E1E' });
             }
         },
         lerTermo() {
             const nomePreenchido = this.nomeCompleto.trim() || "[SEU NOME COMPLETO AQUI]";
             const textoTermo = `
                 <div style="text-align: justify; font-size: 0.85rem; line-height: 1.5;">
-                    Eu, <b>${nomePreenchido}</b>, declaro que compreendo as minhas responsabilidades operacionais ao utilizar o sistema PiZZA Master.<br><br>
-                    Comprometo-me a realizar as contagens de estoque, produção e registo de limpeza com a máxima atenção e veracidade. Declaro também que o desenvolvedor e administrador do sistema (Gabriel) está inteiramente isento de qualquer responsabilidade civil, legal ou financeira decorrente de erros de digitação, falhas no envio de pedidos de compras pelo WhatsApp, perdas de estoque ou uso indevido da plataforma por minha parte.<br><br>
-                    Tenho ciência de que todas as minhas ações no aplicativo são registradas no log de auditoria do sistema em tempo real.
+                    Eu, <b>${nomePreenchido}</b>, comprometo-me a realizar as contagens de estoque, produção e registos com a máxima atenção.<br><br>
+                    Declaro para os devidos fins legais que o desenvolvedor do aplicativo, <b>Gabriel</b>, está total e inteiramente isento de qualquer responsabilidade sobre erros de contagem, pedidos incorretos gerados pelo app, perdas financeiras ou quebras de estoque.<br><br>
+                    Declaro ainda ter ciência de que o aplicativo é uma ferramenta de software independente e <span style="color: #FF5252; font-weight: bold;">não possui qualquer vínculo legal, societário ou trabalhista com a pizzaria</span>, servindo apenas como facilitador de cálculos.<br><br>
+                    Reconheço que todas as minhas interações no sistema são registadas digitalmente.
                 </div>
             `;
             Swal.fire({
-                title: 'Termo de Responsabilidade',
+                title: 'Termo de Isenção',
                 html: textoTermo,
-                background: '#1E1E1E',
-                color: '#FFF',
-                confirmButtonColor: '#FFAB00'
+                background: '#1E1E1E', color: '#FFF', confirmButtonColor: '#FFAB00'
             });
         },
         salvarNovoPerfil() {
@@ -129,11 +126,11 @@ Vue.component('tela-login', {
                 return;
             }
             if (!this.nomeCompleto.trim() || !this.dataNascimento) {
-                Swal.fire({ icon: 'warning', text: 'Preencha nome completo e data.', background: '#1E1E1E', color: '#FFF' });
+                Swal.fire({ icon: 'warning', text: 'Preencha o seu Nome Completo e Data de Nascimento.', background: '#1E1E1E', color: '#FFF' });
                 return;
             }
             if (!this.aceitouTermo) {
-                Swal.fire({ icon: 'error', title: 'Atenção', text: 'É obrigatório ler e aceitar o Termo de Responsabilidade.', background: '#1E1E1E', color: '#FFF' });
+                Swal.fire({ icon: 'error', title: 'Atenção', text: 'É obrigatório ler e concordar com o Termo de Isenção para usar o app.', background: '#1E1E1E', color: '#FFF' });
                 return;
             }
 
@@ -144,11 +141,11 @@ Vue.component('tela-login', {
             this.$root.equipe[idx].termoAceito = true;
             this.$root.equipe[idx].dataTermoAceito = new Date().toLocaleString('pt-BR');
 
-            // SINCRONIZA USUÁRIO NO FIREBASE
+            // 🟢 SINCRONIZA USUÁRIO NO FIREBASE
             db.collection("configuracoes").doc("equipe").set({ lista: this.$root.equipe }, { merge: true });
             this.$root.salvarMemoriaLocal();
             
-            Swal.fire({ icon: 'success', title: 'Registado!', timer: 1500, showConfirmButton: false, background: '#1E1E1E' }).then(() => {
+            Swal.fire({ icon: 'success', title: 'Assinatura Registada!', timer: 1500, showConfirmButton: false, background: '#1E1E1E' }).then(() => {
                 this.logarUsuario(this.$root.equipe[idx]);
                 this.etapa = 'padrao';
                 this.novoPin = '';
@@ -160,11 +157,11 @@ Vue.component('tela-login', {
             if (u) {
                 this.$root.pedidosResetSenha.push({ id: Date.now(), idUsuario: u.id, nome: u.nome, dataStr: new Date().toLocaleDateString('pt-BR') });
                 this.$root.salvarMemoriaLocal();
-                Swal.fire({ icon: 'success', title: 'Enviado', text: 'Aguarde a gerência autorizar.', background: '#1E1E1E', color: '#FFF' });
+                Swal.fire({ icon: 'success', title: 'Pedido Enviado', text: 'O gerente irá autorizar o reset no painel.', background: '#1E1E1E', color: '#FFF' });
                 this.etapa = 'padrao';
                 this.nomeRecuperacao = '';
             } else {
-                Swal.fire({ icon: 'error', text: 'Usuário não encontrado.', background: '#1E1E1E', color: '#FFF' });
+                Swal.fire({ icon: 'error', text: 'Utilizador não encontrado no sistema.', background: '#1E1E1E', color: '#FFF' });
             }
         },
         logarUsuario(u) {
@@ -175,11 +172,12 @@ Vue.component('tela-login', {
         }
     },
     mounted() {
-        if (!document.getElementById('css-log')) {
+        if (!document.getElementById('css-log-v93')) {
             const style = document.createElement('style');
-            style.id = 'css-log';
+            style.id = 'css-log-v93';
             style.innerHTML = `
                 .input-nativo { width: 100%; padding: 15px; border-radius: 8px; border: 1px solid #444; background: #2C2C2C; color: white; font-size: 1.1rem; box-sizing: border-box; margin-bottom: 15px; text-align: center; }
+                .input-nativo:focus { border-color: var(--cor-primaria); outline: none; }
                 .label-ia { color: #AAA; font-size: 0.75rem; font-weight: bold; margin-bottom: 5px; display: block; letter-spacing: 1px; }
             `;
             document.head.appendChild(style);
