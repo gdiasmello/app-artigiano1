@@ -1,4 +1,4 @@
-// INÍCIO DO ARQUIVO modulos/ajustes_perfil.js - v1.0.4
+// INÍCIO DO ARQUIVO modulos/ajustes_perfil.js - v1.0.8
 Vue.component('tela-ajustes-perfil', {
     template: `
     <div class="container animate__animated animate__fadeInRight" v-if="$root.usuario" style="padding-bottom: 100px;">
@@ -39,28 +39,50 @@ Vue.component('tela-ajustes-perfil', {
     data() {
         return {
             form: {
-                nome: '', nomeCompleto: '', pin: '',
+                nome: '', 
+                nomeCompleto: '', 
+                pin: '',
                 preferencias: { saudacaoZap: '', despedidaZap: '' }
             }
         };
     },
+    watch: {
+        // 🟢 MAGIA AQUI: O formulário só é preenchido no momento EXATO em que o utilizador abre esta tela
+        '$root.viewAtual'(novaTela) {
+            if (novaTela === 'tela-ajustes-perfil') {
+                this.carregarDados();
+            }
+        }
+    },
     mounted() {
-        // Puxa os dados que estão atualmente na memória
-        this.form.nome = this.$root.usuario.nome || '';
-        this.form.nomeCompleto = this.$root.usuario.nomeCompleto || '';
-        this.form.pin = this.$root.usuario.pin || '';
-        this.form.preferencias.saudacaoZap = this.$root.usuario.preferencias?.saudacaoZap || '';
-        this.form.preferencias.despedidaZap = this.$root.usuario.preferencias?.despedidaZap || 'Obrigado.';
+        // Se der F5 na página e o utilizador já existir, carrega os dados com segurança
+        if (this.$root.usuario) {
+            this.carregarDados();
+        }
 
-        if (!document.getElementById('css-perfil-v104')) {
-            const style = document.createElement('style'); style.id = 'css-perfil-v104';
-            style.innerHTML = `.input-dark { width: 100%; padding: 12px; background: #2C2C2C; border: 1px solid #444; border-radius: 8px; color: white; font-size: 1rem; box-sizing: border-box; outline: none; transition: 0.2s; } .input-dark:focus { border-color: #00B0FF; } .label-ia { color: #AAA; font-size: 0.8rem; font-weight: bold; margin-bottom: 5px; display: block; }`;
+        if (!document.getElementById('css-perfil-v108')) {
+            const style = document.createElement('style'); 
+            style.id = 'css-perfil-v108';
+            style.innerHTML = `
+                .input-dark { width: 100%; padding: 12px; background: #2C2C2C; border: 1px solid #444; border-radius: 8px; color: white; font-size: 1rem; box-sizing: border-box; outline: none; transition: 0.2s; } 
+                .input-dark:focus { border-color: #00B0FF; } 
+                .label-ia { color: #AAA; font-size: 0.8rem; font-weight: bold; margin-bottom: 5px; display: block; }
+            `;
             document.head.appendChild(style);
         }
     },
     methods: {
+        carregarDados() {
+            // 🟢 TRAVA DE SEGURANÇA: Aborta a leitura se não houver login
+            if (!this.$root.usuario) return; 
+
+            this.form.nome = this.$root.usuario.nome || '';
+            this.form.nomeCompleto = this.$root.usuario.nomeCompleto || '';
+            this.form.pin = this.$root.usuario.pin || '';
+            this.form.preferencias.saudacaoZap = this.$root.usuario.preferencias?.saudacaoZap || '';
+            this.form.preferencias.despedidaZap = this.$root.usuario.preferencias?.despedidaZap || 'Obrigado.';
+        },
         salvarPerfil() {
-            // Verifica se as regras básicas foram cumpridas
             if (!this.form.nome.trim() || this.form.pin.length !== 4) {
                 Swal.fire({ icon: 'warning', title: 'Atenção', text: 'O nome é obrigatório e o PIN tem de ter exatos 4 números.', background: '#1E1E1E', color: '#FFF' });
                 return;
@@ -68,7 +90,6 @@ Vue.component('tela-ajustes-perfil', {
 
             this.$root.vibrar(30);
 
-            // Procura o utilizador na base de dados global e altera os dados dele
             const idx = this.$root.equipe.findIndex(u => u.id === this.$root.usuario.id);
             if (idx !== -1) {
                 this.$root.equipe[idx].nome = this.form.nome.trim();
@@ -79,10 +100,8 @@ Vue.component('tela-ajustes-perfil', {
                 this.$root.equipe[idx].preferencias.saudacaoZap = this.form.preferencias.saudacaoZap;
                 this.$root.equipe[idx].preferencias.despedidaZap = this.form.preferencias.despedidaZap;
 
-                // Atualiza também a sessão de quem está logado no momento
                 this.$root.usuario = this.$root.equipe[idx];
 
-                // 🟢 Envia a nova senha e os novos dados para a NUVEM
                 db.collection("configuracoes").doc("equipe").set({ lista: this.$root.equipe }, { merge: true });
                 this.$root.salvarMemoriaLocal();
 

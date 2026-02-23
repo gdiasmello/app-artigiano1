@@ -1,7 +1,8 @@
-// INÍCIO DO ARQUIVO modulos/ajustes_equipe.js - v0.0.93
+// INÍCIO DO ARQUIVO modulos/ajustes_equipe.js - v1.0.7
 Vue.component('tela-ajustes-equipe', {
     template: `
     <div class="container animate__animated animate__fadeInRight" v-if="$root.usuario" style="padding-bottom: 100px;">
+        
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
             <h2 style="margin: 0; color: #D50000;">👥 Equipe</h2>
             <button @click="voltar" style="background: none; border: none; color: var(--text-sec); font-size: 1.5rem;"><i class="fas fa-arrow-left"></i></button>
@@ -12,17 +13,25 @@ Vue.component('tela-ajustes-equipe', {
                 <i class="fas fa-user-plus"></i> ADICIONAR FUNCIONÁRIO
             </button>
 
-            <div v-for="m in $root.equipe" :key="m.id" class="card" style="padding: 15px; display: flex; justify-content: space-between; align-items: center; border-left: 4px solid #444;">
+            <div v-for="m in $root.equipe" :key="m.id" class="card" style="padding: 15px; display: flex; justify-content: space-between; align-items: center; border-left: 4px solid #444;" :style="m.permissoes.admin ? 'border-color: #FF5252;' : ''">
+                
                 <div @click="editar(m)" style="flex: 1; cursor: pointer;">
-                    <strong style="color: white; font-size: 1.1rem; display: block;">{{ m.nome }}</strong>
+                    <strong style="color: white; font-size: 1.1rem; display: block;">
+                        <i v-if="m.permissoes.admin" class="fas fa-crown" style="color: #FF5252; font-size: 0.8rem; margin-right: 5px;"></i>
+                        {{ m.nome }}
+                    </strong>
+                    
                     <div style="display: flex; gap: 8px; align-items: center; margin-top: 5px; flex-wrap: wrap;">
                         <span style="background: #333; color: #AAA; padding: 2px 8px; border-radius: 4px; font-size: 0.7rem; font-weight: bold;">{{ m.cargo }}</span>
+                        
                         <span v-if="m.pin === '1234'" style="background: #FFAB00; color: #000; padding: 2px 8px; border-radius: 4px; font-size: 0.7rem; font-weight: bold;">PENDENTE SETUP</span>
+                        
                         <span v-if="m.termoAceito" style="background: rgba(0,230,118,0.1); color: #00E676; border: 1px solid #00E676; padding: 2px 8px; border-radius: 4px; font-size: 0.7rem; font-weight: bold;">
                             <i class="fas fa-file-signature"></i> TERMO OK
                         </span>
                     </div>
                 </div>
+                
                 <div style="display: flex; gap: 15px;">
                     <button v-if="m.termoAceito" @click="gerarPDF(m)" style="background: none; border: none; color: #FFF; font-size: 1.2rem;"><i class="fas fa-file-pdf"></i></button>
                     <button @click="editar(m)" style="background: none; border: none; color: #00B0FF; font-size: 1.2rem;"><i class="fas fa-edit"></i></button>
@@ -37,26 +46,32 @@ Vue.component('tela-ajustes-equipe', {
             <input type="text" v-model="form.nome" placeholder="Ex: João" class="input-dark" style="margin-bottom: 15px;" />
             
             <label class="label-ia">Cargo / Função</label>
-            <select v-model="form.cargo" class="input-dark" style="margin-bottom: 25px;">
+            <select v-model="form.cargo" @change="autoAjustarPermissoes" class="input-dark" style="margin-bottom: 25px;">
+                <option value="Administrador">Administrador</option>
+                <option value="Gerente">Gerente</option>
                 <option value="Pizzaiolo">Pizzaiolo</option>
                 <option value="Atendente">Atendente</option>
-                <option value="Gerente">Gerente</option>
             </select>
 
             <h4 style="color: #FF5252; border-bottom: 1px solid #333; padding-bottom: 10px; margin-bottom: 15px;">Acessos Liberados</h4>
+            
             <div style="display: grid; grid-template-columns: 1fr; gap: 10px;">
-                <div v-for="(val, chave) in listaPermissoes" :key="chave" @click="form.permissoes[chave] = !form.permissoes[chave]" style="display: flex; align-items: center; gap: 15px; background: #222; padding: 12px; border-radius: 8px; cursor: pointer; border: 1px solid #333;">
-                    <div style="width: 40px; height: 22px; background: #444; border-radius: 20px; position: relative; transition: 0.3s;" :style="form.permissoes[chave] ? 'background: #00E676;' : ''">
-                        <div style="width: 16px; height: 16px; background: white; border-radius: 50%; position: absolute; top: 3px; left: 3px; transition: 0.3s;" :style="form.permissoes[chave] ? 'left: 21px;' : ''"></div>
+                <div v-for="(val, chave) in listaPermissoes" :key="chave" @click="form.permissoes[chave] = !form.permissoes[chave]" style="display: flex; align-items: center; gap: 15px; background: #222; padding: 12px; border-radius: 8px; cursor: pointer; border: 1px solid #333;" :style="form.permissoes.admin && chave !== 'admin' ? 'opacity: 0.5; pointer-events: none;' : ''">
+                    <div style="width: 40px; height: 22px; background: #444; border-radius: 20px; position: relative; transition: 0.3s;" :style="form.permissoes[chave] || form.permissoes.admin ? 'background: #00E676;' : ''">
+                        <div style="width: 16px; height: 16px; background: white; border-radius: 50%; position: absolute; top: 3px; left: 3px; transition: 0.3s;" :style="form.permissoes[chave] || form.permissoes.admin ? 'left: 21px;' : ''"></div>
                     </div>
-                    <span style="color: #EEE; font-size: 0.9rem;">{{ val }}</span>
+                    <span style="color: #EEE; font-size: 0.9rem;">
+                        {{ val }}
+                        <span v-if="form.permissoes.admin && chave !== 'admin'" style="color: #00E676; font-size: 0.7rem; margin-left: 5px;">(Incluído)</span>
+                    </span>
                 </div>
             </div>
 
             <div style="display: flex; gap: 10px; margin-top: 25px;">
                 <button @click="modo = 'lista'" class="btn" style="background: #444; color: white; flex: 1;">CANCELAR</button>
-                <button @click="salvar" class="btn" style="background: #D50000; color: white; flex: 2;">SALVAR E GERAR PIN</button>
+                <button @click="salvar" class="btn" style="background: #D50000; color: white; flex: 2;">SALVAR DADOS</button>
             </div>
+            
             <button v-if="editandoId && editandoId !== $root.usuario.id" @click="apagar(editandoId)" class="btn" style="background: none; border: 1px dashed #FF5252; color: #FF5252; margin-top: 15px;">EXCLUIR FUNCIONÁRIO</button>
         </div>
     </div>
@@ -67,7 +82,6 @@ Vue.component('tela-ajustes-equipe', {
             editandoId: null,
             form: {
                 nome: '', cargo: 'Atendente', pin: '1234', 
-                // Estes dados são deixados em branco para o funcionário preencher no 1º login
                 nomeCompleto: '', nascimento: '', termoAceito: false, dataTermoAceito: '',
                 permissoes: { admin: false, producao: false, pedidos: false, limpeza: true, gerenciar: false, historico: false, avisos: false, adicionar: false, remover: false },
                 preferencias: { vibracao: true, biometriaAtiva: false, saudacaoZap: '', despedidaZap: 'Obrigado.' }
@@ -85,11 +99,13 @@ Vue.component('tela-ajustes-equipe', {
                 this.$root.salvarMemoriaLocal();
             }
         });
-        if (!document.getElementById('css-eqp')) {
+        
+        if (!document.getElementById('css-eqp-v107')) {
             const style = document.createElement('style');
-            style.id = 'css-eqp';
+            style.id = 'css-eqp-v107';
             style.innerHTML = `
                 .input-dark { width: 100%; padding: 12px; background: #2C2C2C; border: 1px solid #444; border-radius: 8px; color: white; font-size: 1rem; box-sizing: border-box; }
+                .input-dark:focus { border-color: #D50000; outline: none; }
                 .label-ia { color: #AAA; font-size: 0.8rem; font-weight: bold; margin-bottom: 5px; display: block; }
             `;
             document.head.appendChild(style);
@@ -114,12 +130,20 @@ Vue.component('tela-ajustes-equipe', {
             this.form = JSON.parse(JSON.stringify(m));
             this.modo = 'form';
         },
+        autoAjustarPermissoes() {
+            if (this.form.cargo === 'Administrador') {
+                this.form.permissoes.admin = true;
+            } else if (this.form.permissoes.admin) {
+                this.form.permissoes.admin = false;
+            }
+        },
         salvar() {
             if (!this.form.nome.trim()) return;
+            
             this.$root.autorizarAcao('admin', () => {
                 if (this.editandoId) {
                     const i = this.$root.equipe.findIndex(u => u.id === this.editandoId);
-                    // Preserva os dados que o funcionário já preencheu caso você edite apenas as permissões
+                    
                     this.form.nomeCompleto = this.$root.equipe[i].nomeCompleto || '';
                     this.form.nascimento = this.$root.equipe[i].nascimento || '';
                     this.form.termoAceito = this.$root.equipe[i].termoAceito || false;
@@ -134,7 +158,7 @@ Vue.component('tela-ajustes-equipe', {
                 db.collection("configuracoes").doc("equipe").set({ lista: this.$root.equipe }, { merge: true });
                 this.$root.salvarMemoriaLocal();
                 this.modo = 'lista';
-                Swal.fire({ icon: 'success', title: 'Salvo!', text: 'A senha provisória é 1234', timer: 1500, showConfirmButton: false, background: '#1E1E1E' });
+                Swal.fire({ icon: 'success', title: 'Salvo!', text: 'Senha do novo funcionário é 1234', timer: 1500, showConfirmButton: false, background: '#1E1E1E' });
             });
         },
         apagar(id) {
