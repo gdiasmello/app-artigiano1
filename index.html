@@ -5,23 +5,49 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="theme-color" content="#121212">
     <title>PiZZA Master</title>
+    
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css" rel="stylesheet">
+    
     <style>
-        :root { --bg-main: #121212; --bg-card: #1E1E1E; --cor-primaria: #FFAB00; --text-main: #FFFFFF; --text-sec: #AAAAAA; }
-        body { background-color: var(--bg-main); color: var(--text-main); font-family: sans-serif; margin: 0; padding: 0; overscroll-behavior-y: none; -webkit-tap-highlight-color: transparent; }
+        :root {
+            --bg-main: #121212;
+            --bg-card: #1E1E1E;
+            --cor-primaria: #FFAB00;
+            --text-main: #FFFFFF;
+            --text-sec: #AAAAAA;
+        }
+        
+        body {
+            background-color: var(--bg-main);
+            color: var(--text-main);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            overscroll-behavior-y: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+        
         .container { padding: 20px; max-width: 600px; margin: 0 auto; }
         .card { background-color: var(--bg-card); border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
         .btn { width: 100%; padding: 15px; border-radius: 8px; border: none; font-size: 1rem; cursor: pointer; transition: 0.2s; }
-        #escudo-erro { display: none; flex-direction: column; justify-content: center; align-items: center; height: 100vh; background: #121212; color: #FFF; text-align: center; padding: 20px; }
+        .btn:active { transform: scale(0.98); }
+        
+        #escudo-erro {
+            display: none; flex-direction: column; justify-content: center; align-items: center;
+            height: 100vh; background: #121212; color: #FFF; text-align: center; padding: 20px;
+        }
     </style>
 </head>
 <body>
+
     <div id="escudo-erro">
         <i class="fas fa-exclamation-triangle" style="font-size: 4rem; color: #FF5252; margin-bottom: 20px;"></i>
-        <h2>Ops! Falha no sistema.</h2>
-        <p id="msg-erro-critico"></p>
-        <button onclick="localStorage.clear(); window.location.reload();" style="padding: 15px 30px; background: #FF5252; color: white; border: none; border-radius: 8px;">Reiniciar App</button>
+        <h2>Ops! Ocorreu uma falha no sistema.</h2>
+        <p id="msg-erro-critico" style="color: #AAA; font-size: 0.9rem; margin-bottom: 20px;"></p>
+        <button onclick="localStorage.clear(); window.location.reload();" style="padding: 15px 30px; background: #FF5252; color: white; border: none; border-radius: 8px; font-weight: bold;">
+            Reparar e Reiniciar App
+        </button>
     </div>
 
     <div id="app">
@@ -42,31 +68,37 @@
         <tela-ajustes-sugestoes v-show="viewAtual === 'tela-ajustes-sugestoes'"></tela-ajustes-sugestoes>
         <tela-ajustes-avisos v-show="viewAtual === 'tela-ajustes-avisos'"></tela-ajustes-avisos>
         <tela-ajustes-ajuda v-show="viewAtual === 'tela-ajustes-ajuda'"></tela-ajustes-ajuda>
+        <tela-ajustes-rotas v-show="viewAtual === 'tela-ajustes-rotas'"></tela-ajustes-rotas>
         <tela-ajustes-checklists v-show="viewAtual === 'tela-ajustes-checklists'"></tela-ajustes-checklists>
     </div>
 
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+    
     <script src="https://cdn.jsdelivr.net/npm/vue@2.6.14/dist/vue.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
-    <script src="modulos/login.js?v=1.1.4"></script>
-    <script src="modulos/dashboard.js?v=1.1.4"></script>
-    <script src="modulos/massa.js?v=1.1.4"></script>
-    <script src="modulos/sacolao.js?v=1.1.4"></script>
-    <script src="modulos/insumos.js?v=1.1.4"></script>
-    <script src="modulos/gelo.js?v=1.1.4"></script>
-    <script src="modulos/limpeza.js?v=1.1.4"></script>
-    <script src="modulos/historico.js?v=1.1.4"></script>
-    <script src="modulos/ajustes.js?v=1.1.4"></script>
-    <script src="modulos/ajustes_perfil.js?v=1.1.4"></script>
-    <script src="modulos/ajustes_loja.js?v=1.1.4"></script>
-    <script src="modulos/ajustes_equipe.js?v=1.1.4"></script>
-    <script src="modulos/ajustes_produtos.js?v=1.1.4"></script>
-    <script src="modulos/ajustes_sugestoes.js?v=1.1.4"></script>
-    <script src="modulos/ajustes_avisos.js?v=1.1.4"></script>
-    <script src="modulos/ajustes_ajuda.js?v=1.1.4"></script>
-    <script src="modulos/ajustes_checklists.js?v=1.1.4"></script>
-    <script src="main.js?v=1.1.4"></script>
+    <script src="modulos/login.js?v=2.0.0"></script>
+    <script src="modulos/dashboard.js?v=2.0.0"></script>
+    <script src="modulos/massa.js?v=2.0.0"></script>
+    <script src="modulos/sacolao.js?v=2.0.0"></script>
+    <script src="modulos/insumos.js?v=2.0.0"></script>
+    <script src="modulos/gelo.js?v=2.0.0"></script>
+    <script src="modulos/limpeza.js?v=2.0.0"></script>
+    <script src="modulos/historico.js?v=2.0.0"></script>
+    
+    <script src="modulos/ajustes.js?v=2.0.0"></script>
+    <script src="modulos/ajustes_perfil.js?v=2.0.0"></script>
+    <script src="modulos/ajustes_loja.js?v=2.0.0"></script>
+    <script src="modulos/ajustes_equipe.js?v=2.0.0"></script>
+    <script src="modulos/ajustes_produtos.js?v=2.0.0"></script>
+    <script src="modulos/ajustes_sugestoes.js?v=2.0.0"></script>
+    <script src="modulos/ajustes_avisos.js?v=2.0.0"></script>
+    <script src="modulos/ajustes_ajuda.js?v=2.0.0"></script>
+    <script src="modulos/ajustes_rotas.js?v=2.0.0"></script>
+    <script src="modulos/ajustes_checklists.js?v=2.0.0"></script>
+    
+    <script src="main.js?v=2.0.0"></script>
+
 </body>
 </html>
