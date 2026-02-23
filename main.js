@@ -1,6 +1,6 @@
-// INÍCIO DO ARQUIVO main.js - v1.0.2
+// INÍCIO DO ARQUIVO main.js - v1.0.6
 
-// 1. CONFIGURAÇÃO DO FIREBASE
+// 1. CONFIGURAÇÃO DO FIREBASE (A sua Nuvem)
 const firebaseConfig = {
     apiKey: "AIzaSyBL70gtkhjBvC9BiKvz5HBivH07JfRKuo4",
     authDomain: "artigiano-app.firebaseapp.com",
@@ -11,30 +11,33 @@ const firebaseConfig = {
     appId: "1:212218495726:web:dd6fec7a4a8c7ad572a9ff"
 };
 
-// Inicializa a Nuvem
-if (!firebase.apps.length) { 
-    firebase.initializeApp(firebaseConfig); 
+// Inicializa a Nuvem apenas se ainda não estiver rodando
+if (!firebase.apps.length) {
+    firebase.initializeApp(firebaseConfig);
 }
 const db = firebase.firestore();
 
-// 2. ESCUDO ANTI-ERRO GLOBAL
-window.onerror = function(msg, url, line, col, error) { return false; };
+// 2. ESCUDO ANTI-ERRO (Evita a Tela Preta)
+window.onerror = function(msg, url, line, col, error) { 
+    return false; 
+};
+
 Vue.config.errorHandler = function (err, vm, info) {
     console.error(err);
     const erroDiv = document.getElementById('escudo-erro');
-    if(erroDiv) {
+    if (erroDiv) {
         document.getElementById('app').style.display = 'none';
         erroDiv.style.display = 'flex';
         document.getElementById('msg-erro-critico').innerText = 'Erro Vue: ' + err.message;
     }
 };
 
-// 3. APLICAÇÃO VUE PRINCIPAL
+// 3. APLICAÇÃO VUE PRINCIPAL (O Cérebro)
 const app = new Vue({
     el: '#app',
     data: {
         // 🟢 SISTEMA DE VERSÃO AUTOMÁTICO
-        versaoApp: '1.0.2',
+        versaoApp: '1.0.6',
 
         viewAtual: 'tela-login',
         usuario: null,
@@ -60,9 +63,7 @@ const app = new Vue({
             0: 80, 1: 0, 2: 0, 3: 60, 4: 65, 5: 110, 6: 120, feriado: 130 
         },
         
-        feriados: [
-            { data: "2026-12-25", nome: "Natal" }
-        ],
+        feriados: [],
         avisos: [],
         rotasSalvas: ['Geladeira 1', 'Estoque Seco', 'Embalagens', 'Material de Limpeza'],
         
@@ -123,7 +124,11 @@ const app = new Vue({
                     color: '#FFF' 
                 }).then((result) => {
                     if (result.isConfirmed) { 
-                        if (navigator.app) navigator.app.exitApp(); else window.close(); 
+                        if (navigator.app) {
+                            navigator.app.exitApp(); 
+                        } else {
+                            window.close(); 
+                        }
                     } else { 
                         history.pushState({ tela: this.viewAtual }, ""); 
                     }
@@ -137,8 +142,12 @@ const app = new Vue({
             this.vibrar(30);
             const hora = new Date().getHours(); 
             let tempo = 'Bom dia';
-            if (hora >= 12 && hora < 18) tempo = 'Boa tarde'; 
-            else if (hora >= 18) tempo = 'Boa noite';
+            
+            if (hora >= 12 && hora < 18) {
+                tempo = 'Boa tarde'; 
+            } else if (hora >= 18) {
+                tempo = 'Boa noite';
+            }
             
             const pref = this.usuario?.preferencias || {};
             const saudacao = pref.saudacaoZap ? ` ${pref.saudacaoZap}` : ''; 
@@ -151,7 +160,11 @@ const app = new Vue({
         
         async verificarBiometriaLocal() { 
             if (window.PublicKeyCredential) { 
-                try { return true; } catch (e) { return false; } 
+                try { 
+                    return true; 
+                } catch (e) { 
+                    return false; 
+                } 
             } 
             return false; 
         },
@@ -160,7 +173,9 @@ const app = new Vue({
             if (this.eventoInstalacao) { 
                 this.eventoInstalacao.prompt(); 
                 const { outcome } = await this.eventoInstalacao.userChoice; 
-                if (outcome === 'accepted') { this.estaInstalado = true; } 
+                if (outcome === 'accepted') { 
+                    this.estaInstalado = true; 
+                } 
             }
         },
         
@@ -180,7 +195,9 @@ const app = new Vue({
                 } else {
                     this.bancoProdutos.forEach(p => { 
                         if (p.sazonal && p.sazonal.ativa && p.sazonal.nomePizza === nomePizza) { 
-                            let d = new Date(); d.setDate(d.getDate() + 15); p.sazonal.dataExpiracao = d.toISOString(); 
+                            let d = new Date(); 
+                            d.setDate(d.getDate() + 15); 
+                            p.sazonal.dataExpiracao = d.toISOString(); 
                         } 
                     });
                     this.registrarHistorico('Sazonal Adiada', 'Produtos', `Pizza ${nomePizza} prorrogada.`);
@@ -202,8 +219,15 @@ const app = new Vue({
                 Swal.fire({ 
                     title: '🔒 PIN de Admin:', 
                     input: 'password', 
-                    inputAttributes: { inputmode: 'numeric', maxlength: 4, style: 'text-align: center; letter-spacing: 5px; font-size: 1.5rem; background: #111; color: #FFF;' }, 
-                    showCancelButton: true, confirmButtonText: 'Autorizar', background: '#1E1E1E', color: '#FFF' 
+                    inputAttributes: { 
+                        inputmode: 'numeric', 
+                        maxlength: 4, 
+                        style: 'text-align: center; letter-spacing: 5px; font-size: 1.5rem; background: #111; color: #FFF;' 
+                    }, 
+                    showCancelButton: true, 
+                    confirmButtonText: 'Autorizar', 
+                    background: '#1E1E1E', 
+                    color: '#FFF' 
                 }).then((result) => {
                     if (result.isConfirmed) {
                         const admin = this.equipe.find(u => u.pin === result.value && u.permissoes.admin);
@@ -216,6 +240,42 @@ const app = new Vue({
                         }
                     }
                 });
+            }
+        },
+
+        // 🟢 SISTEMA DE TUTORIAIS INTELIGENTES
+        precisaVerTutorial(idTutorial) {
+            if (!this.usuario) return false;
+            if (!this.usuario.tutoriaisVistos) {
+                this.$set(this.usuario, 'tutoriaisVistos', []);
+            }
+            return !this.usuario.tutoriaisVistos.includes(idTutorial);
+        },
+        
+        marcarTutorialVisto(idTutorial) {
+            if (!this.usuario) return;
+            if (!this.usuario.tutoriaisVistos) {
+                this.$set(this.usuario, 'tutoriaisVistos', []);
+            }
+            
+            if (!this.usuario.tutoriaisVistos.includes(idTutorial)) {
+                this.usuario.tutoriaisVistos.push(idTutorial);
+                this.atualizarUsuarioNaNuvem();
+            }
+        },
+        
+        marcarVersaoVista() {
+            if (!this.usuario) return;
+            this.$set(this.usuario, 'versaoVista', this.versaoApp);
+            this.atualizarUsuarioNaNuvem();
+        },
+        
+        atualizarUsuarioNaNuvem() {
+            const idx = this.equipe.findIndex(u => u.id === this.usuario.id);
+            if (idx !== -1) {
+                this.equipe[idx] = this.usuario;
+                db.collection("configuracoes").doc("equipe").set({ lista: this.equipe }, { merge: true });
+                this.salvarMemoriaLocal();
             }
         },
         
@@ -243,7 +303,11 @@ const app = new Vue({
         carregarMemoriaLocal() {
             const salvo = localStorage.getItem('pizzaMasterOfflineData');
             if (salvo) { 
-                try { Object.assign(this, JSON.parse(salvo)); } catch(e) {} 
+                try { 
+                    Object.assign(this, JSON.parse(salvo)); 
+                } catch(e) {
+                    console.error("Erro ao carregar dados locais.");
+                } 
             }
         },
         
@@ -274,7 +338,7 @@ const app = new Vue({
             try {
                 const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=-23.3103&longitude=-51.1628&current_weather=true&timezone=America/Sao_Paulo`);
                 const data = await res.json();
-                if (data?.current_weather) { 
+                if (data && data.current_weather) { 
                     this.clima.temperatura = Math.round(data.current_weather.temperature); 
                     this.clima.isCalor = this.clima.temperatura >= 27; 
                 }
@@ -300,6 +364,7 @@ const app = new Vue({
         if (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true) { 
             this.estaInstalado = true; 
         }
+        
         if (window.PublicKeyCredential) { 
             this.biometriaDisponivel = true; 
         }
@@ -322,10 +387,22 @@ const app = new Vue({
         });
     },
     watch: {
-        bancoProdutos: { deep: true, handler() { this.salvarMemoriaLocal(); } },
-        bancoChecklists: { deep: true, handler() { this.salvarMemoriaLocal(); } },
-        avisos: { deep: true, handler() { this.salvarMemoriaLocal(); } },
-        equipe: { deep: true, handler() { this.salvarMemoriaLocal(); } }
+        bancoProdutos: { 
+            deep: true, 
+            handler() { this.salvarMemoriaLocal(); } 
+        },
+        bancoChecklists: { 
+            deep: true, 
+            handler() { this.salvarMemoriaLocal(); } 
+        },
+        avisos: { 
+            deep: true, 
+            handler() { this.salvarMemoriaLocal(); } 
+        },
+        equipe: { 
+            deep: true, 
+            handler() { this.salvarMemoriaLocal(); } 
+        }
     }
 });
 // FIM DO ARQUIVO main.js
