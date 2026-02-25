@@ -16,19 +16,57 @@ if (!firebase.apps.length) {
 const db = firebase.firestore();
 
 // 2. ESCUDO GLOBAL DE ERROS
-Vue.config.errorHandler = (err, vm, info) => {
-    console.error("Erro Vue:", err, info);
+function exibirErroFatal(titulo, erro, info = '') {
+    console.error(titulo, erro, info);
     const escudo = document.getElementById('escudo-erro');
     const detalhes = document.getElementById('detalhes-erro');
-    if (escudo) {
+    if (escudo && detalhes) {
         escudo.style.display = 'flex';
-        if (detalhes) detalhes.innerText = `${err.message}\n${info}`;
+        
+        const dataHora = new Date().toLocaleString('pt-BR');
+        const userAgent = navigator.userAgent;
+        const url = window.location.href;
+        
+        let mensagemErro = 'Erro desconhecido';
+        let stackErro = 'N/A';
+
+        try {
+            if (erro) {
+                mensagemErro = erro.message || erro.toString();
+                stackErro = erro.stack || 'N/A';
+            }
+        } catch (e) {
+            mensagemErro = 'Erro ao processar mensagem de erro';
+        }
+        
+        const relatorio = `
+[RELATÓRIO DE ERRO - ${dataHora}]
+----------------------------------------
+TIPO: ${titulo}
+MENSAGEM: ${mensagemErro}
+STACK: ${stackErro}
+INFO VUE: ${info || 'N/A'}
+----------------------------------------
+AMBIENTE:
+URL: ${url}
+User Agent: ${userAgent}
+        `.trim();
+        
+        detalhes.value = relatorio;
     }
+}
+
+Vue.config.errorHandler = (err, vm, info) => {
+    exibirErroFatal("ERRO VUE", err, info);
 };
 
 window.onerror = (msg, url, line, col, error) => {
-    console.error("Erro Global:", msg, error);
+    exibirErroFatal("ERRO GLOBAL JS", error || msg, `Linha: ${line}, Col: ${col}, URL: ${url}`);
     return false;
+};
+
+window.onunhandledrejection = (event) => {
+    exibirErroFatal("PROMISE REJEITADA", event.reason);
 };
 
 // 3. INSTÂNCIA VUE PRINCIPAL

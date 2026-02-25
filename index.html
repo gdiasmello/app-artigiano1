@@ -86,16 +86,37 @@
 <body>
 
     <div id="escudo-erro">
-        <i class="fas fa-robot animate__animated animate__bounce animate__infinite" style="font-size: 4rem; color: var(--cor-erro); margin-bottom: 25px;"></i>
-        <h2 style="margin-bottom: 10px;">Opa! O Cérebro da IA travou.</h2>
-        <p style="color: #AAA; margin-bottom: 30px; line-height: 1.5;">Detectamos uma falha técnica. Não se preocupe, seus dados estão seguros no cache local.</p>
-        <div id="detalhes-erro" style="background: #1A1A1A; padding: 15px; border-radius: 8px; font-family: monospace; font-size: 0.8rem; color: #FF5252; margin-bottom: 30px; width: 100%; max-width: 400px; text-align: left; overflow: auto; max-height: 150px;"></div>
-        <button onclick="location.reload();" class="btn" style="background: var(--cor-primaria); color: #121212; max-width: 300px;">
-            <i class="fas fa-sync"></i> REINICIAR SISTEMA
+        <i class="fas fa-bug animate__animated animate__shakeX" style="font-size: 4rem; color: var(--cor-erro); margin-bottom: 25px;"></i>
+        <h2 style="margin-bottom: 10px;">Ops! Ocorreu um erro inesperado.</h2>
+        <p style="color: #AAA; margin-bottom: 20px; line-height: 1.5; max-width: 500px;">
+            O sistema encontrou um problema e precisou parar. Por favor, copie o relatório abaixo e envie para o suporte.
+        </p>
+        
+        <div style="position: relative; width: 100%; max-width: 600px; margin-bottom: 20px;">
+            <textarea id="detalhes-erro" readonly style="width: 100%; height: 200px; background: #1A1A1A; border: 1px solid #333; color: #FF5252; padding: 15px; border-radius: 8px; font-family: monospace; font-size: 0.8rem; resize: none;"></textarea>
+            <button onclick="copiarErro()" style="position: absolute; top: 10px; right: 10px; background: #333; color: white; border: 1px solid #555; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 0.8rem;">
+                <i class="fas fa-copy"></i> Copiar
+            </button>
+        </div>
+
+        <div style="display: flex; gap: 10px; width: 100%; max-width: 400px;">
+            <button onclick="location.reload();" class="btn" style="background: var(--cor-primaria); color: #121212; flex: 1;">
+                <i class="fas fa-sync"></i> TENTAR NOVAMENTE
+            </button>
+        </div>
+        
+        <button onclick="localStorage.clear(); location.reload();" style="background: none; border: none; color: #555; margin-top: 20px; text-decoration: underline; cursor: pointer; font-size: 0.8rem;">
+            Limpar Cache e Resetar Tudo (Último Recurso)
         </button>
-        <button onclick="localStorage.clear(); location.reload();" style="background: none; border: none; color: #555; margin-top: 20px; text-decoration: underline; cursor: pointer;">
-            Limpar Cache e Forçar Reset
-        </button>
+
+        <script>
+            function copiarErro() {
+                const texto = document.getElementById('detalhes-erro');
+                texto.select();
+                document.execCommand('copy');
+                alert('Erro copiado para a área de transferência!');
+            }
+        </script>
     </div>
 
     <div id="app" v-cloak>
