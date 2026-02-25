@@ -1,12 +1,13 @@
-// INÍCIO DO ARQUIVO main.js - v2.0.9
+/**
+ * PiZZA Master - Core Engine v2.20
+ * Focado em Resiliência e Sincronização em Tempo Real
+ */
+
+// 1. CONFIGURAÇÃO FIREBASE (Firestore v8)
 const firebaseConfig = { 
     apiKey: "AIzaSyBL70gtkhjBvC9BiKvz5HBivH07JfRKuo4", 
     authDomain: "artigiano-app.firebaseapp.com", 
-    databaseURL: "https://artigiano-app-default-rtdb.firebaseio.com", 
-    projectId: "artigiano-app", 
-    storageBucket: "artigiano-app.firebasestorage.app", 
-    messagingSenderId: "212218495726", 
-    appId: "1:212218495726:web:dd6fec7a4a8c7ad572a9ff" 
+    projectId: "artigiano-app"
 };
 
 if (!firebase.apps.length) {
@@ -14,287 +15,277 @@ if (!firebase.apps.length) {
 }
 const db = firebase.firestore();
 
-// 🟢 ESCUDO ANTI-FALHAS CRÍTICAS
-window.onerror = function(msg, url, line, col, error) { 
-    return false; 
-};
-
-Vue.config.errorHandler = function (err, vm, info) {
-    console.error(err);
-    const div = document.getElementById('escudo-erro');
-    if (div) { 
-        document.getElementById('app').style.display = 'none'; 
-        div.style.display = 'flex'; 
-        document.getElementById('msg-erro-critico').innerText = err.message; 
+// 2. ESCUDO GLOBAL DE ERROS
+Vue.config.errorHandler = (err, vm, info) => {
+    console.error("Erro Vue:", err, info);
+    const escudo = document.getElementById('escudo-erro');
+    const detalhes = document.getElementById('detalhes-erro');
+    if (escudo) {
+        escudo.style.display = 'flex';
+        if (detalhes) detalhes.innerText = `${err.message}\n${info}`;
     }
 };
 
-// 🟢 APLICAÇÃO PRINCIPAL (CÉREBRO)
+window.onerror = (msg, url, line, col, error) => {
+    console.error("Erro Global:", msg, error);
+    return false;
+};
+
+// 3. INSTÂNCIA VUE PRINCIPAL
 const app = new Vue({
     el: '#app',
     data: {
-        versaoApp: '2.0.9', 
-        viewAtual: 'tela-login', 
-        carregandoDados: true, // Bloqueia a tela de login até a nuvem responder
-        usuario: null, 
-        naPizzaria: false, 
-        estaInstalado: false, 
-        biometriaDisponivel: !!window.PublicKeyCredential, 
-        eventoInstalacao: null,
-        estoqueMassasHoje: 0, 
-        carrinhoInsumos: [], 
-        carrinhoSacolao: [], 
+        versaoApp: '1.0.0',
+        viewAtual: 'tela-login',
+        carregandoDados: true,
+        usuario: null,
+        
+        // Estado Operacional
         dataEstoqueMassas: '',
-        clima: { temperatura: '...', isCalor: false, modoSmart: true, riscoChuvaNoturna: false, geloVerificado: false },
-        equipe: [], 
-        bancoProdutos: [], 
-        rotasSalvas: ['Geladeira 1', 'Estoque Seco', 'Embalagens', 'Limpeza'], 
-        avisos: [], 
-        historicoGlobais: [], 
-        feedbacks: [], 
-        pedidosResetSenha: [], 
-        bancoChecklists: [], 
-        tarefasConcluidas: [], 
+        dataPedidoSacolao: '',
+        dataPedidoLimpeza: '',
+        dataPedidoInsumos: '',
+        carrinhoInsumos: [], // Carrinho consolidado (Insumos + Limpeza)
+        
+        // Sensores e IA
+        clima: { temperatura: '...', isCalor: false, modoSmart: true },
         feriados: [],
+        multiplicadoresProducao: { vespera: 30, feriado: 50 }, // % a mais
+        
+        // Listas Sincronizadas
+        equipe: [],
+        bancoProdutos: [],
+        rotasSalvas: [],
+        avisos: [],
+        eventosEspeciais: [], // { data, nome, multiplicador }
+        historicoGlobais: [],
+        pedidosResetSenha: [],
+        bancoChecklists: [], // { id, titulo, publico, idCriador, tarefas: [], agendamento: { horario, dias, feriado, vespera } }
+        checklistsConcluidos: {}, // { 'checklistId_data': true }
+        dadosNavegacao: null, // Para passar dados entre telas
+        
+        // Configurações
         metas: { 0: 80, 1: 0, 2: 0, 3: 60, 4: 65, 5: 110, 6: 120, feriado: 130 },
-        estadoErroIA: { titulo: 'Aviso', mensagem: '', icone: 'fa-exclamation-triangle', cor: '#FF5252', telaDestino: 'tela-dashboard', permitirIgnorar: false, callbackIgnorar: null }
+        localizacaoLoja: { latitude: null, longitude: null },
+        
+        // Memória de IA
+        memoriaOperacional: {
+            itens: {} // { 'Nome do Item': { ultimaQtd: 10, frequenciaDias: 3, ultimoPedido: timestamp } }
+        }
     },
     methods: {
-        vibrar(ms) { 
-            if (this.usuario && this.usuario.preferencias && this.usuario.preferencias.vibracao !== false && navigator.vibrate) {
-                navigator.vibrate(ms); 
-            }
-        },
-        
-        mudarTela(t, h = true) { 
-            this.vibrar(30); 
-            this.viewAtual = t; 
-            window.scrollTo(0,0); 
-            if (h) history.pushState({tela:t}, ""); 
-        },
-        
-        fazerLogout() { 
-            this.vibrar([50,50]); 
-            this.usuario = null; 
-            this.mudarTela('tela-login'); 
-        },
-        
-        lidarComBotaoVoltar(e) {
-            if (this.viewAtual === 'tela-dashboard' || this.viewAtual === 'tela-login') {
-                this.vibrar([50, 100]);
-                Swal.fire({ 
-                    title: 'Sair do App?', 
-                    text: "Deseja fechar o aplicativo?", 
-                    icon: 'question', 
-                    showCancelButton: true, 
-                    confirmButtonColor: '#D50000', 
-                    cancelButtonColor: '#444', 
-                    confirmButtonText: 'Sim, Sair', 
-                    cancelButtonText: 'Ficar', 
-                    background: '#1E1E1E', 
-                    color: '#FFF' 
-                }).then((r) => { 
-                    if (r.isConfirmed) { 
-                        if (navigator.app) navigator.app.exitApp(); else window.close(); 
-                    } else { 
-                        history.pushState({ tela: this.viewAtual }, ""); 
-                    } 
-                });
-            } else { 
-                this.mudarTela('tela-dashboard', false); 
-            }
-        },
-        
-        marcarNovidadesLidas() {
-            if (!this.usuario) return;
-            // Força a atualização reativa na tela
-            this.$set(this.usuario, 'versaoVista', this.versaoApp);
-            
-            const idx = this.equipe.findIndex(u => u.id === this.usuario.id);
-            if (idx !== -1) {
-                this.$set(this.equipe[idx], 'versaoVista', this.versaoApp);
-                db.collection("configuracoes").doc("equipe").set({ lista: this.equipe }, { merge: true });
-            }
-            this.salvarMemoriaLocal();
-        },
-        
-        marcarVersaoVista() { 
-            this.marcarNovidadesLidas(); 
+        vibrar(ms) {
+            if (navigator.vibrate) navigator.vibrate(ms);
         },
 
-        enviarWhatsApp(txt) {
-            this.vibrar(30);
-            const hora = new Date().getHours();
-            let tempo = hora >= 18 ? 'Boa noite' : (hora >= 12 ? 'Boa tarde' : 'Bom dia');
-            const pref = this.usuario?.preferencias || {};
-            const saudacao = pref.saudacaoZap ? ` ${pref.saudacaoZap}` : '';
-            const desp = pref.despedidaZap || 'Obrigado.';
-            const msg = `${tempo}!${saudacao}\nPedido de hoje:\n\n${txt}\n\n${desp}`;
+        mudarTela(tela, pushState = true) {
+            this.vibrar(20);
+            this.viewAtual = tela;
+            window.scrollTo(0, 0);
+            if (pushState) history.pushState({ tela }, "");
+        },
+
+        fazerLogout() {
+            this.usuario = null;
+            this.mudarTela('tela-login');
+        },
+
+        // Sincronização LocalStorage (Cache)
+        salvarMemoriaLocal() {
+            const snapshot = {
+                dataEstoqueMassas: this.dataEstoqueMassas,
+                dataPedidoSacolao: this.dataPedidoSacolao,
+                dataPedidoLimpeza: this.dataPedidoLimpeza,
+                dataPedidoInsumos: this.dataPedidoInsumos,
+                carrinhoInsumos: this.carrinhoInsumos,
+                metas: this.metas
+            };
+            localStorage.setItem('pizza_master_cache', JSON.stringify(snapshot));
+        },
+
+        carregarMemoriaLocal() {
+            const cache = localStorage.getItem('pizza_master_cache');
+            if (cache) {
+                try {
+                    const parsed = JSON.parse(cache);
+                    Object.assign(this, parsed);
+                } catch (e) { console.error("Erro cache:", e); }
+            }
+        },
+
+        // Auditoria
+        registrarHistorico(acao, setor, detalhes = '') {
+            if (!this.usuario) return;
+            const log = {
+                id: Date.now(),
+                usuario: this.usuario.nome,
+                acao,
+                setor,
+                detalhes,
+                dataStr: new Date().toLocaleDateString('pt-BR'),
+                horaStr: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+            };
+            this.historicoGlobais.unshift(log);
+            if (this.historicoGlobais.length > 500) this.historicoGlobais.pop();
+            
+            db.collection("operacao").doc("historico").set({ itens: this.historicoGlobais });
+        },
+
+        // WhatsApp Integration
+        enviarWhatsApp(texto) {
+            const saudacao = this.usuario?.preferencias?.saudacaoZap || "Olá!";
+            const despedida = this.usuario?.preferencias?.despedidaZap || "Obrigado.";
+            const msg = `${saudacao}\n\n${texto}\n\n${despedida}`;
             window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(msg)}`, '_blank');
         },
 
-        registrarHistorico(acao, setor, detalhes = '') {
-            if (!this.usuario) return;
-            const item = { 
-                id: Date.now(), 
-                usuario: this.usuario.nome, 
-                acao: acao, 
-                setor: setor, 
-                detalhes: detalhes, 
-                dataStr: new Date().toLocaleDateString('pt-BR'), 
-                horaStr: new Date().toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'}) 
-            };
-            this.historicoGlobais.unshift(item);
-            if (this.historicoGlobais.length > 300) {
-                this.historicoGlobais.pop();
-            }
-            db.collection("operacao").doc("historico").set({ itens: this.historicoGlobais });
-            this.salvarMemoriaLocal();
-        },
-
-        salvarMemoriaLocal() {
-            const obj = { 
-                equipe: this.equipe, 
-                bancoProdutos: this.bancoProdutos, 
-                rotasSalvas: this.rotasSalvas, 
-                avisos: this.avisos, 
-                historicoGlobais: this.historicoGlobais, 
-                metas: this.metas 
-            };
-            localStorage.setItem('pizzaMasterOffline', JSON.stringify(obj));
-        },
-        
-        carregarMemoriaLocal() {
-            const data = localStorage.getItem('pizzaMasterOffline');
-            if (data) { 
-                try { 
-                    Object.assign(this, JSON.parse(data)); 
-                } catch(e) { 
-                    console.error(e); 
-                } 
-            }
-        },
-
-        async buscarClima() {
-            try {
-                const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=-23.3103&longitude=-51.1628&current_weather=true&timezone=America/Sao_Paulo`);
-                const data = await res.json();
-                if (data?.current_weather) { 
-                    this.clima.temperatura = Math.round(data.current_weather.temperature); 
-                    this.clima.isCalor = this.clima.temperatura >= 27; 
-                }
-            } catch(e) { 
-                this.clima.temperatura = 'Off'; 
-            }
-        },
-        
-        verificarLocalizacao() { 
-            if ("geolocation" in navigator) { 
-                navigator.geolocation.getCurrentPosition(() => this.naPizzaria = true, () => this.naPizzaria = false); 
-            }
-        },
-
-        precisaVerTutorial(idTutorial) {
-            if (!this.usuario) return false;
-            if (!this.usuario.tutoriaisVistos) this.$set(this.usuario, 'tutoriaisVistos', []);
-            return !this.usuario.tutoriaisVistos.includes(idTutorial);
-        },
-        
-        marcarTutorialVisto(idTutorial) {
-            if (!this.usuario) return;
-            if (!this.usuario.tutoriaisVistos) this.$set(this.usuario, 'tutoriaisVistos', []);
-            
-            if (!this.usuario.tutoriaisVistos.includes(idTutorial)) {
-                this.usuario.tutoriaisVistos.push(idTutorial);
-                const idx = this.equipe.findIndex(u => u.id === this.usuario.id);
-                if (idx !== -1) {
-                    this.$set(this.equipe[idx], 'tutoriaisVistos', this.usuario.tutoriaisVistos);
-                    db.collection("configuracoes").doc("equipe").set({ lista: this.equipe }, { merge: true });
-                }
-                this.salvarMemoriaLocal();
-            }
-        },
-
-        async autorizarAcao(permissaoNecessaria, callbackSucesso) {
-            if (this.usuario?.permissoes?.admin || this.usuario?.permissoes[permissaoNecessaria]) { 
-                return callbackSucesso(); 
+        // Segurança
+        autorizarAcao(permissao, callback) {
+            if (this.usuario?.permissoes?.admin || this.usuario?.permissoes[permissao]) {
+                return callback();
             }
             
-            this.vibrar([100, 50, 100]);
-            Swal.fire({ 
-                title: '🔒 PIN de Admin:', 
-                input: 'password', 
-                inputAttributes: { inputmode: 'numeric', maxlength: 4, style: 'text-align: center; letter-spacing: 5px; font-size: 1.5rem; background: #111; color: #FFF;' }, 
-                showCancelButton: true, 
-                confirmButtonText: 'Autorizar', 
-                background: '#1E1E1E', 
-                color: '#FFF' 
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    const admin = this.equipe.find(u => u.pin === result.value && u.permissoes.admin);
-                    if (admin) { 
-                        this.vibrar([50, 50]); 
-                        this.registrarHistorico('Autorização', 'Segurança', `Admin ${admin.nome}`); 
-                        callbackSucesso(); 
-                    } else { 
-                        Swal.fire({ icon: 'error', title: 'Incorreto', background: '#1E1E1E', color: '#FFF' }); 
+            Swal.fire({
+                title: '🔒 PIN de Gerente:',
+                input: 'password',
+                inputAttributes: { inputmode: 'numeric', maxlength: 4 },
+                showCancelButton: true,
+                confirmButtonText: 'Autorizar',
+                background: '#1E1E1E', color: '#FFF'
+            }).then((res) => {
+                if (res.isConfirmed) {
+                    const admin = this.equipe.find(u => u.pin === res.value && (u.permissoes?.admin || u.cargo === 'Gerente'));
+                    if (admin) {
+                        this.registrarHistorico('Segurança', 'Autorização', `Ação aprovada por ${admin.nome}`);
+                        callback();
+                    } else {
+                        Swal.fire({ icon: 'error', title: 'PIN Inválido', background: '#1E1E1E' });
                     }
                 }
             });
+        },
+
+        ordenarProdutosPorRota(produtos) {
+            if (!this.rotasSalvas || this.rotasSalvas.length === 0) {
+                return [...produtos].sort((a, b) => a.nome.localeCompare(b.nome));
+            }
+
+            const ordemRotas = {};
+            this.rotasSalvas.forEach((rota, index) => {
+                ordemRotas[rota] = index;
+            });
+
+            return [...produtos].sort((a, b) => {
+                const rotaA = (a.rotas && a.rotas.length > 0) ? a.rotas[0] : (a.rota || '');
+                const rotaB = (b.rotas && b.rotas.length > 0) ? b.rotas[0] : (b.rota || '');
+
+                const posA = rotaA && ordemRotas[rotaA] !== undefined ? ordemRotas[rotaA] : 999;
+                const posB = rotaB && ordemRotas[rotaB] !== undefined ? ordemRotas[rotaB] : 999;
+
+                if (posA !== posB) return posA - posB;
+                return a.nome.localeCompare(b.nome);
+            });
+        },
+
+        carregarFeriados() {
+            const anoAtual = new Date().getFullYear();
+            const feriadosBase = [
+                { data: `${anoAtual}-01-01`, nome: 'Confraternização Universal' },
+                { data: `${anoAtual}-04-21`, nome: 'Tiradentes' },
+                { data: `${anoAtual}-05-01`, nome: 'Dia do Trabalho' },
+                { data: `${anoAtual}-09-07`, nome: 'Independência do Brasil' },
+                { data: `${anoAtual}-10-12`, nome: 'Nossa Senhora Aparecida' },
+                { data: `${anoAtual}-11-02`, nome: 'Finados' },
+                { data: `${anoAtual}-11-15`, nome: 'Proclamação da República' },
+                { data: `${anoAtual}-12-10`, nome: 'Aniversário de Londrina' },
+                { data: `${anoAtual}-12-25`, nome: 'Natal' },
+                // Adicionando ano seguinte para planejamento
+                { data: `${anoAtual + 1}-01-01`, nome: 'Confraternização Universal' },
+                { data: `${anoAtual + 1}-04-21`, nome: 'Tiradentes' },
+                { data: `${anoAtual + 1}-05-01`, nome: 'Dia do Trabalho' },
+                { data: `${anoAtual + 1}-09-07`, nome: 'Independência do Brasil' },
+                { data: `${anoAtual + 1}-10-12`, nome: 'Nossa Senhora Aparecida' },
+                { data: `${anoAtual + 1}-11-02`, nome: 'Finados' },
+                { data: `${anoAtual + 1}-11-15`, nome: 'Proclamação da República' },
+                { data: `${anoAtual + 1}-12-10`, nome: 'Aniversário de Londrina' },
+                { data: `${anoAtual + 1}-12-25`, nome: 'Natal' },
+            ];
+            // Evita duplicatas se já houver feriados customizados
+            feriadosBase.forEach(f => {
+                if (!this.feriados.some(fExistente => fExistente.data === f.data)) {
+                    this.feriados.push(f);
+                }
+            });
         }
-    },
+     },
     mounted() {
         this.carregarMemoriaLocal();
-        this.buscarClima();
-        this.verificarLocalizacao();
         
-        window.addEventListener('beforeinstallprompt', (e) => { 
-            e.preventDefault(); 
-            this.eventoInstalacao = e; 
-        });
-        
-        history.pushState({ tela: this.viewAtual }, "");
-        window.onpopstate = this.lidarComBotaoVoltar;
+        // Listeners Firestore (Real-time)
+        const docs = [
+            { col: "configuracoes", doc: "equipe", key: "equipe", field: "lista" },
+            { col: "configuracoes", doc: "bancoProdutos", key: "bancoProdutos", field: "lista" },
+            { col: "configuracoes", doc: "rotas", key: "rotasSalvas", field: "lista" },
+            { col: "configuracoes", doc: "avisos", key: "avisos", field: "lista" },
+            { col: "configuracoes", doc: "loja", key: "loja_config" },
+            { col: "operacao", doc: "historico", key: "historicoGlobais", field: "itens" },
+            { col: "operacao", doc: "memoria", key: "memoriaOperacional" },
+            { col: "operacao", doc: "checklists_concluidos", key: "checklistsConcluidos" }
+        ];
 
-        // 🟢 SINCRONIZAÇÃO EM TEMPO REAL E DESBLOQUEIO DO APP
-        db.collection("configuracoes").doc("equipe").onSnapshot(d => { 
-            if(d.exists) { 
-                this.equipe = d.data().lista || []; 
-                this.salvarMemoriaLocal(); 
-            } 
-            // A mágica acontece aqui: A tela de login é liberada assim que a equipe é baixada!
-            this.carregandoDados = false; 
+        docs.forEach(item => {
+            db.collection(item.col).doc(item.doc).onSnapshot(snap => {
+                if (snap.exists) {
+                    const data = snap.data();
+                    if (item.key === "loja_config") {
+                        if (data.metas) this.metas = data.metas;
+                        if (data.pedidosResetSenha) this.pedidosResetSenha = data.pedidosResetSenha;
+                        if (data.feriados) this.feriados = data.feriados;
+                        if (data.multiplicadoresProducao) this.multiplicadoresProducao = data.multiplicadoresProducao;
+                        if (data.modoSmart !== undefined) this.clima.modoSmart = data.modoSmart;
+                        if (data.eventosEspeciais) this.eventosEspeciais = data.eventosEspeciais;
+                        if (data.localizacaoLoja) this.localizacaoLoja = data.localizacaoLoja;
+                    } else if (item.key === "memoriaOperacional") {
+                        this.memoriaOperacional = data;
+                    } else if (item.key === "checklistsConcluidos") {
+                        this.checklistsConcluidos = data;
+                    } else {
+                        this[item.key] = data[item.field] || [];
+                    }
+                }
+                if (item.key === "equipe") this.carregandoDados = false;
+            });
         });
-        
-        db.collection("configuracoes").doc("bancoProdutos").onSnapshot(d => { 
-            if(d.exists) { this.bancoProdutos = d.data().lista || []; this.salvarMemoriaLocal(); } 
-        });
-        
-        db.collection("configuracoes").doc("rotas").onSnapshot(d => { 
-            if(d.exists) { this.rotasSalvas = d.data().lista || []; this.salvarMemoriaLocal(); } 
-        });
-        
-        db.collection("configuracoes").doc("avisos").onSnapshot(d => { 
-            if(d.exists) { this.avisos = d.data().lista || []; this.salvarMemoriaLocal(); } 
-        });
-        
-        db.collection("operacao").doc("historico").onSnapshot(d => { 
-            if(d.exists) { this.historicoGlobais = d.data().itens || []; this.salvarMemoriaLocal(); } 
-        });
-        
-        db.collection("configuracoes").doc("loja").onSnapshot(d => { 
-            if(d.exists) { 
-                const config = d.data(); 
-                if(config.metas) this.metas = config.metas; 
-                this.salvarMemoriaLocal(); 
-            } 
-        });
-    },
-    watch: {
-        bancoProdutos: { deep: true, handler() { this.salvarMemoriaLocal(); } },
-        avisos: { deep: true, handler() { this.salvarMemoriaLocal(); } },
-        equipe: { deep: true, handler() { this.salvarMemoriaLocal(); } },
-        rotasSalvas: { deep: true, handler() { this.salvarMemoriaLocal(); } }
+
+        // Clima API
+        this.carregarFeriados(); // Carrega feriados locais
+        fetch('https://api.open-meteo.com/v1/forecast?latitude=-23.31&longitude=-51.16&current_weather=true&hourly=precipitation_probability')
+            .then(r => r.json())
+            .then(d => {
+                this.clima.temperatura = Math.round(d.current_weather.temperature);
+                this.clima.isCalor = this.clima.temperatura >= 27;
+                
+                // Verifica chuva entre 18h e 22h
+                const horasPico = [18, 19, 20, 21, 22];
+                const probabilidades = d.hourly.precipitation_probability;
+                const agora = new Date();
+                const diaHoje = agora.getDate();
+                
+                this.clima.vaiChoverPico = horasPico.some(h => {
+                    // Encontra o índice correspondente à hora de hoje
+                    const index = d.hourly.time.findIndex(t => {
+                        const date = new Date(t);
+                        return date.getDate() === diaHoje && date.getHours() === h;
+                    });
+                    return index !== -1 && probabilidades[index] > 40; // Mais de 40% de chance
+                });
+            }).catch(() => this.clima.temperatura = 'Off');
     }
 });
-// FIM DO ARQUIVO main.js
+
+// Navegação Android
+window.onpopstate = (e) => {
+    if (app.viewAtual !== 'tela-dashboard' && app.viewAtual !== 'tela-login') {
+        app.mudarTela('tela-dashboard', false);
+    }
+};

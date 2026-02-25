@@ -1,0 +1,7 @@
+{
+  "name": "PiZZA Master PWA",
+  "description": "Gestão Operacional Inteligente para Pizzarias com IA Preditiva e Offline-First.",
+  "requestFramePermissions": [
+    "geolocation"
+  ]
+}

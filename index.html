@@ -4,101 +4,152 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="theme-color" content="#121212">
-    <title>PiZZA Master</title>
+    <title>PiZZA Master v1.0.0</title>
     
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css" rel="stylesheet">
     
     <style>
-        :root {
-            --bg-main: #121212;
-            --bg-card: #1E1E1E;
-            --cor-primaria: #FFAB00;
-            --text-main: #FFFFFF;
+        :root { 
+            --bg-main: #121212; 
+            --bg-card: #1E1E1E; 
+            --cor-primaria: #FFAB00; 
+            --cor-secundaria: #00B0FF;
+            --cor-sucesso: #00E676;
+            --cor-erro: #FF5252;
+            --text-main: #FFFFFF; 
             --text-sec: #AAAAAA;
         }
-        
-        body {
-            background-color: var(--bg-main);
-            color: var(--text-main);
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            margin: 0;
-            padding: 0;
-            overscroll-behavior-y: none;
-            -webkit-tap-highlight-color: transparent;
+        body { 
+            background-color: var(--bg-main); 
+            color: var(--text-main); 
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; 
+            margin: 0; 
+            padding: 0; 
+            /* Removido overscroll-behavior-y para garantir scroll natural */
+            overflow-x: hidden; /* Evita balanço lateral */
+            overflow-y: auto;   /* Garante scroll vertical */
+            -webkit-overflow-scrolling: touch; /* Scroll suave no iOS */
+            -webkit-tap-highlight-color: transparent; 
         }
-        
         .container { padding: 20px; max-width: 600px; margin: 0 auto; }
-        .card { background-color: var(--bg-card); border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
-        .btn { width: 100%; padding: 15px; border-radius: 8px; border: none; font-size: 1rem; cursor: pointer; transition: 0.2s; }
-        .btn:active { transform: scale(0.98); }
-        
-        #escudo-erro {
-            display: none; flex-direction: column; justify-content: center; align-items: center;
-            height: 100vh; background: #121212; color: #FFF; text-align: center; padding: 20px;
+        .card { background-color: var(--bg-card); border-radius: 12px; box-shadow: 0 8px 16px rgba(0,0,0,0.4); margin-bottom: 20px; border: 1px solid #333; }
+        .btn { 
+            width: 100%; 
+            padding: 15px; 
+            border-radius: 10px; 
+            border: none; 
+            font-size: 1rem; 
+            cursor: pointer; 
+            transition: all 0.2s ease; 
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            font-weight: 600;
         }
+        .btn:active { transform: scale(0.97); opacity: 0.9; }
+        
+        /* Escudo de Erro */
+        #escudo-erro { 
+            display: none; 
+            flex-direction: column; 
+            justify-content: center; 
+            align-items: center; 
+            height: 100vh; 
+            background: #121212; 
+            color: #FFF; 
+            text-align: center; 
+            padding: 30px; 
+            position: fixed;
+            top: 0; left: 0; width: 100%; z-index: 9999;
+        }
+
+        /* Inputs Customizados */
+        .input-dark { 
+            width: 100%; 
+            padding: 15px; 
+            background: #2C2C2C; 
+            border: 1px solid #444; 
+            border-radius: 10px; 
+            color: white; 
+            font-size: 1rem; 
+            box-sizing: border-box; 
+            outline: none; 
+            transition: border-color 0.3s;
+        }
+        .input-dark:focus { border-color: var(--cor-primaria); }
+        
+        [v-cloak] { display: none; }
     </style>
 </head>
 <body>
 
     <div id="escudo-erro">
-        <i class="fas fa-exclamation-triangle" style="font-size: 4rem; color: #FF5252; margin-bottom: 20px;"></i>
-        <h2>Ops! Ocorreu uma falha no sistema.</h2>
-        <p id="msg-erro-critico" style="color: #AAA; font-size: 0.9rem; margin-bottom: 20px;"></p>
-        <button onclick="localStorage.clear(); window.location.reload();" style="padding: 15px 30px; background: #FF5252; color: white; border: none; border-radius: 8px; font-weight: bold;">
-            Reparar e Reiniciar App
+        <i class="fas fa-robot animate__animated animate__bounce animate__infinite" style="font-size: 4rem; color: var(--cor-erro); margin-bottom: 25px;"></i>
+        <h2 style="margin-bottom: 10px;">Opa! O Cérebro da IA travou.</h2>
+        <p style="color: #AAA; margin-bottom: 30px; line-height: 1.5;">Detectamos uma falha técnica. Não se preocupe, seus dados estão seguros no cache local.</p>
+        <div id="detalhes-erro" style="background: #1A1A1A; padding: 15px; border-radius: 8px; font-family: monospace; font-size: 0.8rem; color: #FF5252; margin-bottom: 30px; width: 100%; max-width: 400px; text-align: left; overflow: auto; max-height: 150px;"></div>
+        <button onclick="location.reload();" class="btn" style="background: var(--cor-primaria); color: #121212; max-width: 300px;">
+            <i class="fas fa-sync"></i> REINICIAR SISTEMA
+        </button>
+        <button onclick="localStorage.clear(); location.reload();" style="background: none; border: none; color: #555; margin-top: 20px; text-decoration: underline; cursor: pointer;">
+            Limpar Cache e Forçar Reset
         </button>
     </div>
 
-    <div id="app">
-        <tela-login v-show="viewAtual === 'tela-login'"></tela-login>
-        <tela-dashboard v-show="viewAtual === 'tela-dashboard'"></tela-dashboard>
-        <tela-massa v-show="viewAtual === 'tela-massa'"></tela-massa>
-        <tela-sacolao v-show="viewAtual === 'tela-sacolao'"></tela-sacolao>
-        <tela-insumos v-show="viewAtual === 'tela-insumos'"></tela-insumos>
-        <tela-gelo v-show="viewAtual === 'tela-gelo'"></tela-gelo>
-        <tela-limpeza v-show="viewAtual === 'tela-limpeza'"></tela-limpeza>
-        <tela-historico v-show="viewAtual === 'tela-historico'"></tela-historico>
-        
-        <tela-ajustes v-show="viewAtual === 'tela-ajustes'"></tela-ajustes>
-        <tela-ajustes-perfil v-show="viewAtual === 'tela-ajustes-perfil'"></tela-ajustes-perfil>
-        <tela-ajustes-loja v-show="viewAtual === 'tela-ajustes-loja'"></tela-ajustes-loja>
-        <tela-ajustes-equipe v-show="viewAtual === 'tela-ajustes-equipe'"></tela-ajustes-equipe>
-        <tela-ajustes-produtos v-show="viewAtual === 'tela-ajustes-produtos'"></tela-ajustes-produtos>
-        <tela-ajustes-sugestoes v-show="viewAtual === 'tela-ajustes-sugestoes'"></tela-ajustes-sugestoes>
-        <tela-ajustes-avisos v-show="viewAtual === 'tela-ajustes-avisos'"></tela-ajustes-avisos>
-        <tela-ajustes-ajuda v-show="viewAtual === 'tela-ajustes-ajuda'"></tela-ajustes-ajuda>
-        <tela-ajustes-rotas v-show="viewAtual === 'tela-ajustes-rotas'"></tela-ajustes-rotas>
-        <tela-ajustes-checklists v-show="viewAtual === 'tela-ajustes-checklists'"></tela-ajustes-checklists>
+    <div id="app" v-cloak>
+        <!-- Componentes Dinâmicos -->
+        <component :is="viewAtual"></component>
     </div>
 
+    <!-- Firebase & Vue via CDN -->
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
-    
     <script src="https://cdn.jsdelivr.net/npm/vue@2.6.14/dist/vue.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
-    <script src="modulos/login.js?v=2.0.0"></script>
-    <script src="modulos/dashboard.js?v=2.0.0"></script>
-    <script src="modulos/massa.js?v=2.0.0"></script>
-    <script src="modulos/sacolao.js?v=2.0.0"></script>
-    <script src="modulos/insumos.js?v=2.0.0"></script>
-    <script src="modulos/gelo.js?v=2.0.0"></script>
-    <script src="modulos/limpeza.js?v=2.0.0"></script>
-    <script src="modulos/historico.js?v=2.0.0"></script>
+    <!-- Módulos de IA -->
+    <script src="/modulos/ia_equipe.js"></script>
+    <script src="/modulos/ia_calendario.js"></script>
+    <script src="/modulos/ia_clima.js"></script>
+    <script src="/modulos/ia_massa.js"></script>
+    <script src="/modulos/ia_sacolao.js"></script>
+    <script src="/modulos/ia_limpeza.js"></script>
+    <script src="/modulos/ia_insumos.js"></script>
+    <script src="/modulos/ia_memoria.js"></script>
+    <script src="/modulos/ia_checklist.js"></script>
+    <script src="/modulos/execucao_checklist.js"></script>
+    <script type="module" src="/modulos/ia_resolucao.js"></script>
+    <script src="/modulos/ia.js"></script> 
+
+    <!-- Módulos de Interface -->
+    <script src="/modulos/login.js"></script>
+    <script src="/modulos/dashboard.js"></script>
+    <script src="/modulos/massa.js"></script>
+    <script src="/modulos/sacolao.js"></script>
+    <script src="/modulos/insumos.js"></script>
+    <script src="/modulos/gelo.js"></script>
+    <script src="/modulos/limpeza.js"></script>
+    <script src="/modulos/historico.js"></script>
+    <script type="module" src="/modulos/erros.js"></script>
     
-    <script src="modulos/ajustes.js?v=2.0.0"></script>
-    <script src="modulos/ajustes_perfil.js?v=2.0.0"></script>
-    <script src="modulos/ajustes_loja.js?v=2.0.0"></script>
-    <script src="modulos/ajustes_equipe.js?v=2.0.0"></script>
-    <script src="modulos/ajustes_produtos.js?v=2.0.0"></script>
-    <script src="modulos/ajustes_sugestoes.js?v=2.0.0"></script>
-    <script src="modulos/ajustes_avisos.js?v=2.0.0"></script>
-    <script src="modulos/ajustes_ajuda.js?v=2.0.0"></script>
-    <script src="modulos/ajustes_rotas.js?v=2.0.0"></script>
-    <script src="modulos/ajustes_checklists.js?v=2.0.0"></script>
+    <!-- Módulos de Ajustes -->
+    <script src="/modulos/ajustes.js"></script>
+    <script src="/modulos/ajustes_perfil.js"></script>
+    <script src="/modulos/ajustes_loja.js"></script>
+    <script src="/modulos/ajustes_equipe.js"></script>
+    <script src="/modulos/gestao_produtos.js"></script>
+    <script src="/modulos/ajustes_sugestoes.js"></script>
+    <script src="/modulos/ajustes_avisos.js"></script>
+    <script src="/modulos/ajustes_ajuda.js"></script>
+    <script src="/modulos/ajustes_rotas.js"></script>
+    <script src="/modulos/logs_sistema.js"></script>
+    <script src="/modulos/ajustes_checklists.js"></script>
+    <script src="/modulos/tutorial_system.js"></script>
     
-    <script src="main.js?v=2.0.0"></script>
+    <!-- Core -->
+    <script src="/main.js"></script>
 
 </body>
 </html>
