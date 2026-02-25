@@ -126,14 +126,8 @@ Vue.component('tela-gestao-produtos', {
                 </div>
             </div>
 
-            <button v-if="editandoIndex === null" @click="adicionarProduto" class="btn" style="background: #00E676; color: #121212; width: 100%; height: 50px;"><i class="fas fa-plus"></i> ADICIONAR À LISTA</button>
-            <div v-else style="display: flex; gap: 10px;">
-                <button @click="salvarEdicao" class="btn" style="background: #FFAB00; color: #121212; flex: 1; height: 50px;"><i class="fas fa-save"></i> ATUALIZAR PRODUTO</button>
-                <button @click="cancelarEdicao" class="btn" style="background: #333; color: white; width: 100px; height: 50px;">CANCELAR</button>
-            </div>
-            <p v-if="lote.length === 0 && editandoIndex === null" style="text-align: center; color: #666; font-size: 0.8rem; margin-top: 10px;">
-                <i class="fas fa-info-circle"></i> Dica: Você pode adicionar vários produtos à lista antes de salvar.
-            </p>
+            <button @click="adicionarProduto" class="btn" style="background: #00E676; color: #121212; width: 100%; height: 50px;"><i class="fas fa-plus"></i> ADICIONAR À LISTA</button>
+            <button @click="adicionarEmMassa" class="btn" style="background: #333; color: white; width: 100%; height: 50px; margin-top: 10px; border: 1px solid #555;"><i class="fas fa-layer-group"></i> ADICIONAR EM MASSA</button>
         </div>
 
         <div v-if="lote.length > 0" class="card" style="padding: 25px; border-top: 5px solid #00B0FF; margin-bottom: 20px;">
@@ -164,10 +158,7 @@ Vue.component('tela-gestao-produtos', {
                     <strong style="color: white;">{{ p.nome }}</strong>
                     <div style="color: #888; font-size: 0.8rem;">{{ p.tipo === 'insumo' ? 'Insumo - ' + p.local : 'Limpeza' }}</div>
                 </div>
-                <div style="display: flex; gap: 5px;">
-                    <button @click="editarProduto(p)" class="btn-delete-aviso" style="background: #FFAB00; color: #121212;"><i class="fas fa-pencil-alt"></i></button>
-                    <button @click="removerProduto(p)" class="btn-delete-aviso"><i class="fas fa-trash"></i></button>
-                </div>
+                <button @click="removerProduto(p)" class="btn-delete-aviso"><i class="fas fa-trash"></i></button>
             </div>
         </div>
     </div>
@@ -175,7 +166,6 @@ Vue.component('tela-gestao-produtos', {
     data() {
         return {
             tipoProduto: 'insumo',
-            editandoIndex: null,
             novoInsumo: { 
                 nome: '', 
                 local: '', 
@@ -266,6 +256,46 @@ Vue.component('tela-gestao-produtos', {
             }
             this.novoLimpeza = { nome: '' };
         },
+        adicionarEmMassa() {
+            Swal.fire({
+                title: 'Adicionar em Massa',
+                html: `
+                    <p style="color:#CCC; font-size:0.9rem;">Cole a lista de nomes abaixo (um por linha).<br>Eles usarão as configurações atuais do formulário.</p>
+                    <textarea id="listaMassa" class="swal2-textarea" style="background:#333; color:white; height:200px;" placeholder="Ex:\nCoca Cola\nGuaraná\nFanta"></textarea>
+                `,
+                showCancelButton: true,
+                confirmButtonText: 'Adicionar ao Lote',
+                confirmButtonColor: '#00E676',
+                background: '#1E1E1E', color: '#FFF',
+                preConfirm: () => {
+                    return document.getElementById('listaMassa').value;
+                }
+            }).then((result) => {
+                if (result.isConfirmed && result.value) {
+                    const linhas = result.value.split('\n');
+                    let count = 0;
+                    
+                    linhas.forEach(linha => {
+                        const nome = linha.trim();
+                        if (nome) {
+                            const produto = this.tipoProduto === 'insumo' ? { ...this.novoInsumo, nome: nome, tipo: 'insumo' } : { ...this.novoLimpeza, nome: nome, tipo: 'limpeza' };
+                            
+                            if (!this.isDuplicado(produto.nome) && !this.lote.some(p => p.nome.toLowerCase() === produto.nome.toLowerCase())) {
+                                this.lote.push(produto);
+                                count++;
+                            }
+                        }
+                    });
+
+                    if (count > 0) {
+                        Swal.fire('Sucesso!', `${count} produtos adicionados ao lote.`, 'success');
+                        this.resetarFormularios();
+                    } else {
+                        Swal.fire('Atenção', 'Nenhum produto novo foi adicionado (duplicatas ou vazios).', 'warning');
+                    }
+                }
+            });
+        },
         removerSelecionados() {
             if (this.produtosSelecionados.length === 0) return;
 
@@ -290,40 +320,6 @@ Vue.component('tela-gestao-produtos', {
                     this.produtosSelecionados = [];
                 }
             });
-        },
-        editarProduto(produto) {
-            const index = this.$root.bancoProdutos.findIndex(p => p.nome === produto.nome && p.tipo === produto.tipo);
-            if (index === -1) return;
-
-            this.editandoIndex = index;
-            this.tipoProduto = produto.tipo;
-            
-            if (produto.tipo === 'insumo') {
-                this.novoInsumo = { ...produto };
-            } else {
-                this.novoLimpeza = { ...produto };
-            }
-            
-            // Rola a página para o topo para ver o formulário
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-        },
-        salvarEdicao() {
-            if (this.editandoIndex === null) return;
-
-            const produtoEditado = this.tipoProduto === 'insumo' ? { ...this.novoInsumo, tipo: 'insumo' } : { ...this.novoLimpeza, tipo: 'limpeza' };
-            
-            // Atualiza no array local
-            this.$root.bancoProdutos.splice(this.editandoIndex, 1, produtoEditado);
-            
-            // Salva no Firebase
-            db.collection('configuracoes').doc('bancoProdutos').set({ lista: this.$root.bancoProdutos });
-            
-            Swal.fire('Sucesso', 'Produto atualizado com sucesso!', 'success');
-            this.cancelarEdicao();
-        },
-        cancelarEdicao() {
-            this.editandoIndex = null;
-            this.resetarFormularios();
         },
         removerProduto(produto) {
             Swal.fire({
