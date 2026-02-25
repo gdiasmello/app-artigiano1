@@ -4,10 +4,10 @@
  */
 Vue.component('tela-login', {
     template: `
-    <div class="container animate__animated animate__fadeIn" style="display: flex; flex-direction: column; justify-content: center; min-height: 90vh;">
+    <div class="container" style="display: flex; flex-direction: column; justify-content: center; min-height: 90vh;">
         
         <div style="text-align: center; margin-bottom: 50px;">
-            <i class="fas fa-pizza-slice animate__animated animate__bounceIn" style="font-size: 5rem; color: var(--cor-primaria); margin-bottom: 20px; filter: drop-shadow(0px 4px 12px rgba(255, 171, 0, 0.4));"></i>
+            <i class="fas fa-pizza-slice" style="font-size: 5rem; color: var(--cor-primaria); margin-bottom: 20px; filter: drop-shadow(0px 4px 12px rgba(255, 171, 0, 0.4));"></i>
             <h1 style="margin: 0; color: white; font-size: 2.5rem; letter-spacing: 3px; font-weight: 900;">PiZZA <span style="color: var(--cor-primaria);">Master</span></h1>
             <p style="color: #666; margin-top: 8px; font-size: 0.9rem; font-weight: 600; text-transform: uppercase; letter-spacing: 2px;">Intelligence ERP</p>
         </div>
@@ -17,7 +17,7 @@ Vue.component('tela-login', {
             <h3 style="color: white; margin: 0;">Sincronizando Cérebro...</h3>
         </div>
 
-        <div v-else-if="tela === 'login'" class="card animate__animated animate__fadeInUp" style="padding: 30px; border-top: 5px solid var(--cor-primaria);">
+        <div v-else-if="tela === 'login'" class="card" style="padding: 30px; border-top: 5px solid var(--cor-primaria);">
             <div style="margin-bottom: 25px;">
                 <label style="color: #888; font-size: 0.75rem; font-weight: 800; margin-bottom: 10px; display: block; text-transform: uppercase;">USUÁRIO</label>
                 <input type="text" v-model="usuarioDigitado" placeholder="Seu nome de login" class="input-dark" @keyup.enter="focarPin">
