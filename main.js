@@ -7,7 +7,11 @@
 const firebaseConfig = { 
     apiKey: "AIzaSyBL70gtkhjBvC9BiKvz5HBivH07JfRKuo4", 
     authDomain: "artigiano-app.firebaseapp.com", 
-    projectId: "artigiano-app"
+    databaseURL: "https://artigiano-app-default-rtdb.firebaseio.com",
+    projectId: "artigiano-app",
+    storageBucket: "artigiano-app.firebasestorage.app",
+    messagingSenderId: "212218495726",
+    appId: "1:212218495726:web:dd6fec7a4a8c7ad572a9ff"
 };
 
 if (!firebase.apps.length) {
@@ -16,58 +20,18 @@ if (!firebase.apps.length) {
 const db = firebase.firestore();
 
 // 2. ESCUDO GLOBAL DE ERROS
-function exibirErroFatal(titulo, erro, info = '') {
-    console.error(titulo, erro, info);
-    const escudo = document.getElementById('escudo-erro');
-    const detalhes = document.getElementById('detalhes-erro');
-    if (escudo && detalhes) {
-        escudo.style.display = 'flex';
-        
-        const dataHora = new Date().toLocaleString('pt-BR');
-        const userAgent = navigator.userAgent;
-        const url = window.location.href;
-        
-        let mensagemErro = 'Erro desconhecido';
-        let stackErro = 'N/A';
-
-        try {
-            if (erro) {
-                mensagemErro = erro.message || erro.toString();
-                stackErro = erro.stack || 'N/A';
-            }
-        } catch (e) {
-            mensagemErro = 'Erro ao processar mensagem de erro';
-        }
-        
-        const relatorio = `
-[RELATÓRIO DE ERRO - ${dataHora}]
-----------------------------------------
-TIPO: ${titulo}
-MENSAGEM: ${mensagemErro}
-STACK: ${stackErro}
-INFO VUE: ${info || 'N/A'}
-----------------------------------------
-AMBIENTE:
-URL: ${url}
-User Agent: ${userAgent}
-        `.trim();
-        
-        detalhes.value = relatorio;
-    }
-}
+// A função window.exibirErroFatal já foi definida no index.html para capturar erros de carregamento.
 
 Vue.config.errorHandler = (err, vm, info) => {
-    exibirErroFatal("ERRO VUE", err, info);
+    if (window.exibirErroFatal) {
+        window.exibirErroFatal("ERRO VUE", err, info);
+    } else {
+        console.error("Erro Vue (Fallback):", err, info);
+    }
 };
 
-window.onerror = (msg, url, line, col, error) => {
-    exibirErroFatal("ERRO GLOBAL JS", error || msg, `Linha: ${line}, Col: ${col}, URL: ${url}`);
-    return false;
-};
-
-window.onunhandledrejection = (event) => {
-    exibirErroFatal("PROMISE REJEITADA", event.reason);
-};
+// Os handlers window.onerror e window.onunhandledrejection já estão definidos no index.html.
+// Não precisamos redefini-los aqui, pois eles já capturam tudo.
 
 // 3. INSTÂNCIA VUE PRINCIPAL
 const app = new Vue({
