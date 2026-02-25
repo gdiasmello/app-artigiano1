@@ -239,6 +239,25 @@ User Agent: ${userAgent}
     <script src="/modulos/tutorial_system.js"></script>
     
     <!-- Core -->
+    <script>
+        // Verificação de Dependências Críticas
+        (function() {
+            const status = document.getElementById('status-loading');
+            if (!status) return;
+            
+            if (typeof Vue === 'undefined') {
+                status.innerText = "ERRO CRÍTICO: Vue.js não carregou!";
+                status.style.color = '#FF5252';
+                console.error("Vue.js missing");
+            } else if (typeof firebase === 'undefined') {
+                status.innerText = "ERRO CRÍTICO: Firebase não carregou!";
+                status.style.color = '#FF5252';
+                console.error("Firebase missing");
+            } else {
+                status.innerText = "Dependências OK. Iniciando App...";
+            }
+        })();
+    </script>
     <script src="/main.js"></script>
 
 </body>

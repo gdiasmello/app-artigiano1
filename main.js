@@ -3,12 +3,20 @@
  * Focado em Resiliência e Sincronização em Tempo Real
  */
 
-// 0. DEBUG INICIAL
-console.log("Iniciando main.js...");
-const statusLoading = document.getElementById('status-loading');
-if (statusLoading) statusLoading.innerText = "Carregando Firebase...";
+// 0. DEBUG INICIAL E PROTEÇÃO
+try {
+    console.log("Iniciando main.js...");
+    const statusLoading = document.getElementById('status-loading');
+    if (statusLoading) statusLoading.innerText = "Carregando Firebase...";
 
-// 1. CONFIGURAÇÃO FIREBASE (Firestore v8)
+    if (typeof firebase === 'undefined') {
+        throw new Error("Firebase não foi carregado. Verifique sua conexão ou bloqueadores de anúncio.");
+    }
+    if (typeof Vue === 'undefined') {
+        throw new Error("Vue.js não foi carregado. Verifique sua conexão.");
+    }
+
+    // 1. CONFIGURAÇÃO FIREBASE (Firestore v8)
 const firebaseConfig = { 
     apiKey: "AIzaSyBL70gtkhjBvC9BiKvz5HBivH07JfRKuo4", 
     authDomain: "artigiano-app.firebaseapp.com", 
@@ -300,3 +308,11 @@ window.onpopstate = (e) => {
         app.mudarTela('tela-dashboard', false);
     }
 };
+
+} catch (e) {
+    if (window.exibirErroFatal) {
+        window.exibirErroFatal("ERRO FATAL MAIN.JS", e);
+    } else {
+        alert("ERRO FATAL: " + e.message);
+    }
+}
