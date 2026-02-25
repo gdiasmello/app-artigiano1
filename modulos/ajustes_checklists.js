@@ -1,216 +1,164 @@
-// modulos/ajustes_checklists.js - Gestão de Rotinas v0.0.47
-
+/**
+ * Checklists v2.11.0
+ */
 Vue.component('tela-ajustes-checklists', {
     template: `
     <div class="container animate__animated animate__fadeInRight" v-if="$root.usuario" style="padding-bottom: 100px;">
-        
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-            <h2 style="margin: 0; color: #2962FF;">✅ Checklists</h2>
-            <button @click="voltar" style="background: none; border: none; color: var(--text-sec); font-size: 1.5rem; cursor: pointer;">
-                <i class="fas fa-arrow-left"></i>
-            </button>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px;">
+            <h2 style="margin: 0; color: #00E676;"><i class="fas fa-clipboard-check"></i> Gestão de Rotinas</h2>
+            <button @click="$root.mudarTela('tela-ajustes')" style="background: none; border: none; color: #AAA; font-size: 1.5rem; cursor: pointer;"><i class="fas fa-arrow-left"></i></button>
         </div>
 
-        <p v-if="!modoFormulario" style="color: var(--text-sec); font-size: 0.9rem; margin-bottom: 20px;">
-            Crie rotinas passo a passo que aparecerão no Mural dos funcionários nos dias programados.
-        </p>
-
-        <div v-if="modoFormulario" class="card animate__animated animate__fadeInDown" style="border-left: 3px solid #2962FF; border-top: 3px solid #2962FF; margin-bottom: 25px;">
-            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #333; padding-bottom: 10px; margin-bottom: 15px;">
-                <h3 style="margin: 0; color: white;">{{ checklistEditando ? 'Editar Checklist' : 'Novo Checklist' }}</h3>
-                <button @click="fecharFormulario" style="background: none; border: none; color: #FF5252; font-size: 1.5rem; cursor: pointer;"><i class="fas fa-times-circle"></i></button>
+        <!-- Criar/Editar Checklist -->
+        <div class="card" style="padding: 20px; border-top: 5px solid #00E676; margin-bottom: 25px;">
+            <h4 style="color: white; margin-top: 0;">{{ editandoId ? 'Editar Rotina' : 'Nova Rotina Inteligente' }}</h4>
+            
+            <input type="text" v-model="novo.titulo" placeholder="Ex: Fechamento de Massa" class="input-dark" style="margin-bottom: 15px;">
+            
+            <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+                <select v-model="novo.publico" class="input-dark" style="flex: 1;">
+                    <option value="Todos">Público: Todos</option>
+                    <option value="Gerente">Público: Gerentes</option>
+                    <option value="Pizzaiolo">Público: Pizzaiolos</option>
+                    <option value="Atendente">Público: Atendentes</option>
+                    <option value="Pessoal">Privado: Só Eu</option>
+                </select>
+                <input type="time" v-model="novo.agendamento.horario" class="input-dark" style="width: 120px;">
             </div>
 
-            <label style="color:#82B1FF; font-size:0.8rem; font-weight: bold; margin-bottom: 5px; display: block;">Título do Checklist</label>
-            <input type="text" v-model="form.titulo" placeholder="Ex: Abertura da Loja" class="input-dark" style="margin-bottom:15px; width: 100%; padding: 12px; background: #2C2C2C; border: none; border-radius: 5px; color: white; box-sizing: border-box;" />
+            <div style="margin-bottom: 15px;">
+                <label style="color: #888; font-size: 0.7rem; font-weight: bold; display: block; margin-bottom: 8px;">DIAS DA SEMANA</label>
+                <div style="display: flex; gap: 5px; flex-wrap: wrap;">
+                    <button v-for="(dia, idx) in diasSemana" 
+                            :key="idx" 
+                            @click="toggleDia(idx)"
+                            :style="novo.agendamento.dias.includes(idx) ? 'background: #00E676; color: #121212;' : 'background: #222; color: #666;'"
+                            style="border: none; padding: 5px 10px; border-radius: 4px; font-size: 0.7rem; cursor: pointer; font-weight: bold;">
+                        {{ dia }}
+                    </button>
+                </div>
+            </div>
 
-            <label style="color:#82B1FF; font-size:0.8rem; font-weight: bold; margin-bottom: 5px; display: block;">Para qual Cargo?</label>
-            <select v-model="form.cargoDestino" class="input-dark" style="margin-bottom: 15px; width: 100%; padding: 12px; background: #2C2C2C; border: none; border-radius: 5px; color: white; box-sizing: border-box;">
-                <option value="Todos">Toda a Equipe</option>
-                <option value="Pizzaiolo">Só Pizzaiolos</option>
-                <option value="Atendente">Só Atendentes</option>
-                <option value="Gerente">Só Gerentes</option>
-            </select>
+            <div style="display: flex; gap: 15px; margin-bottom: 20px;">
+                <label style="display: flex; align-items: center; gap: 8px; color: #AAA; font-size: 0.8rem; cursor: pointer;">
+                    <input type="checkbox" v-model="novo.agendamento.feriado"> Só Feriados
+                </label>
+                <label style="display: flex; align-items: center; gap: 8px; color: #AAA; font-size: 0.8rem; cursor: pointer;">
+                    <input type="checkbox" v-model="novo.agendamento.vespera"> Só Vésperas
+                </label>
+            </div>
 
-            <label style="color:#82B1FF; font-size:0.8rem; font-weight: bold; margin-bottom: 5px; display: block;">Dias da Semana que Aparecerá</label>
-            <div style="display: flex; justify-content: space-between; margin-bottom: 20px; gap: 5px;">
-                <button v-for="(dia, index) in diasSemanaNomes" :key="index" @click="toggleDia(index)" 
-                        style="flex: 1; padding: 10px 0; border-radius: 8px; border: 1px solid #444; font-weight: bold; cursor: pointer; transition: 0.2s;"
-                        :style="form.diasSemana.includes(index) ? 'background: #2962FF; color: #FFF; border-color: #2962FF;' : 'background: #222; color: #888;'">
-                    {{ dia }}
+            <div style="margin-bottom: 20px;">
+                <label style="color: #888; font-size: 0.7rem; font-weight: bold; display: block; margin-bottom: 8px;">TAREFAS (Uma por linha)</label>
+                <textarea v-model="tarefasTexto" class="input-dark" rows="4" placeholder="Ex:\nDesligar Ar Condicionado\nLimpar Bancadas\nAlimentar Levain"></textarea>
+            </div>
+
+            <div style="display: flex; gap: 10px;">
+                <button @click="salvar" class="btn" style="background: #00E676; color: #121212; flex: 2;">
+                    {{ editandoId ? 'ATUALIZAR' : 'CRIAR CHECKLIST' }}
                 </button>
-            </div>
-
-            <div style="background: rgba(41, 98, 255, 0.1); padding: 15px; border-radius: 8px; border: 1px dashed #2962FF; margin-bottom: 20px;">
-                <h5 style="margin: 0 0 10px 0; color: #82B1FF;">Tarefas do Checklist</h5>
-                
-                <div style="display: flex; gap: 10px; margin-bottom: 15px;">
-                    <input type="text" v-model="novaTarefa" placeholder="Ex: Ligar forno" @keyup.enter="adicionarTarefa" style="flex: 1; padding: 10px; background: #111; border: 1px solid #444; color: white; border-radius: 5px;" />
-                    <button @click="adicionarTarefa" style="background: #2962FF; color: white; border: none; padding: 0 15px; border-radius: 5px; font-weight: bold; cursor: pointer;">+</button>
-                </div>
-
-                <div v-for="(tarefa, idx) in form.tarefas" :key="idx" style="display: flex; justify-content: space-between; align-items: center; background: #1A1A1A; padding: 10px; border-radius: 5px; margin-bottom: 5px; border: 1px solid #333;">
-                    <span style="color: white; font-size: 0.9rem;">{{ idx + 1 }}. {{ tarefa.texto }}</span>
-                    <button @click="removerTarefa(idx)" style="background: none; border: none; color: #FF5252; cursor: pointer;"><i class="fas fa-trash"></i></button>
-                </div>
-                
-                <div v-if="form.tarefas.length === 0" style="color: #666; font-size: 0.85rem; font-style: italic; text-align: center;">
-                    Nenhuma tarefa adicionada.
-                </div>
-            </div>
-
-            <button class="btn" style="background: #2962FF; color: white;" @click="salvarChecklist">
-                <i class="fas fa-save"></i> SALVAR CHECKLIST
-            </button>
-        </div>
-
-        <div v-if="!modoFormulario">
-            <button class="btn" style="background: #2962FF; color: white; margin-bottom: 20px; box-shadow: 0 4px 15px rgba(41, 98, 255, 0.3);" @click="abrirParaNovo">
-                <i class="fas fa-plus-circle"></i> CRIAR NOVO CHECKLIST
-            </button>
-
-            <div v-for="chk in $root.bancoChecklists" :key="chk.id" class="card" style="padding: 15px; background: #1A1A1A; border-left: 3px solid #2962FF; margin-bottom: 10px;">
-                <div style="display: flex; justify-content: space-between; align-items: flex-start;">
-                    <div>
-                        <strong style="color: white; font-size: 1.1rem; display: block;">{{ chk.titulo }}</strong>
-                        <span style="background: #333; color: #00B0FF; padding: 2px 6px; border-radius: 4px; font-size: 0.7rem; margin-right: 5px;"><i class="fas fa-user-tag"></i> {{ chk.cargoDestino }}</span>
-                        <small style="color: #888;">{{ chk.tarefas.length }} tarefas</small>
-                        <div style="margin-top: 5px; font-size: 0.75rem; color: #AAA;">
-                            <span v-if="chk.diasSemana.length === 7">Todos os dias</span>
-                            <span v-else>{{ exibirDias(chk.diasSemana) }}</span>
-                        </div>
-                    </div>
-                    
-                    <div style="display: flex; gap: 15px; align-items: center;">
-                        <button @click="abrirParaEditar(chk)" style="background: none; border: none; color: #00B0FF; font-size: 1.2rem; cursor: pointer; padding: 5px;">
-                            <i class="fas fa-edit"></i>
-                        </button>
-                        <div style="width: 1px; height: 20px; background: #444;"></div>
-                        <button @click="tentaRemoverChecklist(chk.id, chk.titulo)" style="background: none; border: none; color: #FF5252; font-size: 1.2rem; cursor: pointer; padding: 5px;">
-                            <i class="fas fa-trash-alt"></i>
-                        </button>
-                    </div>
-                </div>
-            </div>
-
-            <div v-if="$root.bancoChecklists.length === 0" style="text-align: center; color: #666; padding: 20px; font-style: italic;">
-                Nenhum checklist criado.
+                <button v-if="editandoId" @click="cancelarEdicao" class="btn" style="background: #333; color: white; flex: 1;">CANCELAR</button>
             </div>
         </div>
 
+        <h3 style="color: white; font-size: 1rem; margin-bottom: 15px;">Rotinas Cadastradas</h3>
+        <div v-for="(c, i) in $root.bancoChecklists" :key="c.id" class="card" style="padding: 15px; margin-bottom: 12px; display: flex; flex-direction: column; gap: 10px;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <strong style="color: white; font-size: 1rem;">{{ c.titulo }}</strong>
+                <div style="display: flex; gap: 12px;">
+                    <button @click="editar(c)" style="background: none; border: none; color: #00B0FF; cursor: pointer; font-size: 1.1rem;"><i class="fas fa-edit"></i></button>
+                    <button @click="rm(i)" style="background: none; border: none; color: #FF5252; cursor: pointer; font-size: 1.1rem;"><i class="fas fa-trash"></i></button>
+                </div>
+            </div>
+            <div style="display: flex; flex-wrap: wrap; gap: 12px; border-top: 1px solid #222; padding-top: 10px;">
+                <div style="font-size: 0.7rem; color: #888; display: flex; align-items: center; gap: 5px;">
+                    <i class="fas fa-user-shield" style="color: #00E676;"></i> {{ c.publico }}
+                </div>
+                <div v-if="c.agendamento.horario" style="font-size: 0.7rem; color: #888; display: flex; align-items: center; gap: 5px;">
+                    <i class="fas fa-clock" style="color: #FFAB00;"></i> {{ c.agendamento.horario }}
+                </div>
+                <div style="font-size: 0.7rem; color: #888; display: flex; align-items: center; gap: 5px;">
+                    <i class="fas fa-tasks" style="color: #00B0FF;"></i> {{ c.tarefas.length }} tarefas
+                </div>
+            </div>
+        </div>
     </div>
     `,
-    data() {
-        return {
-            modoFormulario: false,
-            checklistEditando: null, 
-            diasSemanaNomes: ['D', 'S', 'T', 'Q', 'Q', 'S', 'S'],
-            novaTarefa: '',
-            
-            formPadrao: {
-                titulo: '', cargoDestino: 'Todos', diasSemana: [0, 1, 2, 3, 4, 5, 6], tarefas: []
-            },
-            form: {}
-        };
+    data() { 
+        return { 
+            editandoId: null,
+            tarefasTexto: '',
+            diasSemana: ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'],
+            novo: { 
+                titulo: '', 
+                publico: 'Todos',
+                tarefas: [],
+                agendamento: {
+                    horario: '',
+                    dias: [0,1,2,3,4,5,6],
+                    feriado: false,
+                    vespera: false
+                }
+            } 
+        }; 
     },
     methods: {
-        voltar() {
-            this.$root.vibrar(30);
-            if (this.modoFormulario) { this.fecharFormulario(); } 
-            else { this.$root.mudarTela('tela-ajustes'); }
+        toggleDia(idx) {
+            const pos = this.novo.agendamento.dias.indexOf(idx);
+            if (pos === -1) this.novo.agendamento.dias.push(idx);
+            else this.novo.agendamento.dias.splice(pos, 1);
         },
-        abrirParaNovo() {
-            this.$root.vibrar(30);
-            this.checklistEditando = null;
-            this.form = JSON.parse(JSON.stringify(this.formPadrao));
-            this.novaTarefa = '';
-            this.modoFormulario = true;
-            window.scrollTo(0, 0);
+        editar(c) {
+            this.editandoId = c.id;
+            this.novo = JSON.parse(JSON.stringify(c));
+            this.tarefasTexto = c.tarefas.join('\n');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
         },
-        abrirParaEditar(chk) {
-            this.$root.vibrar(30);
-            this.checklistEditando = chk.id;
-            this.form = JSON.parse(JSON.stringify(chk));
-            this.novaTarefa = '';
-            this.modoFormulario = true;
-            window.scrollTo(0, 0);
+        cancelarEdicao() {
+            this.editandoId = null;
+            this.novo = { 
+                titulo: '', 
+                publico: 'Todos',
+                tarefas: [],
+                agendamento: { horario: '', dias: [0,1,2,3,4,5,6], feriado: false, vespera: false }
+            };
+            this.tarefasTexto = '';
         },
-        fecharFormulario() { this.$root.vibrar(30); this.modoFormulario = false; },
-        
-        toggleDia(index) {
-            this.$root.vibrar(15);
-            const pos = this.form.diasSemana.indexOf(index);
-            if (pos > -1) {
-                this.form.diasSemana.splice(pos, 1);
+        salvar() {
+            if (!this.novo.titulo) return;
+            
+            this.novo.tarefas = this.tarefasTexto.split('\n').filter(t => t.trim() !== '');
+            this.novo.idCriador = this.$root.usuario.id;
+
+            if (this.editandoId) {
+                const idx = this.$root.bancoChecklists.findIndex(c => c.id === this.editandoId);
+                if (idx !== -1) this.$root.bancoChecklists.splice(idx, 1, { ...this.novo });
             } else {
-                this.form.diasSemana.push(index);
-                this.form.diasSemana.sort(); // Mantém a ordem
-            }
-        },
-
-        adicionarTarefa() {
-            if (!this.novaTarefa.trim()) return;
-            this.$root.vibrar(15);
-            this.form.tarefas.push({ id: Date.now() + Math.floor(Math.random() * 1000), texto: this.novaTarefa.trim() });
-            this.novaTarefa = '';
-        },
-        removerTarefa(idx) {
-            this.$root.vibrar(15);
-            this.form.tarefas.splice(idx, 1);
-        },
-
-        exibirDias(diasArray) {
-            const nomes = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
-            return diasArray.map(d => nomes[d]).join(', ');
-        },
-        
-        salvarChecklist() {
-            this.$root.vibrar(30);
-            
-            if (!this.form.titulo || this.form.diasSemana.length === 0 || this.form.tarefas.length === 0) {
-                this.$root.vibrar([100, 50, 100]);
-                Swal.fire({ icon: 'warning', title: 'Atenção', text: 'Preencha o título, escolha os dias e adicione pelo menos uma tarefa.', background: '#1E1E1E', color: '#FFF' });
-                return;
+                this.novo.id = Date.now();
+                this.$root.bancoChecklists.push({ ...this.novo });
             }
 
-            this.$root.autorizarAcao('adicionar', () => {
-                
-                if (this.checklistEditando) {
-                    const index = this.$root.bancoChecklists.findIndex(c => c.id === this.checklistEditando);
-                    if (index !== -1) {
-                        this.$root.bancoChecklists[index] = { ...this.form, id: this.checklistEditando };
-                        this.$root.registrarHistorico('Checklist Editado', 'Ajustes', `O checklist "${this.form.titulo}" foi atualizado.`);
-                    }
-                } else {
-                    const novoChk = { ...this.form, id: Date.now() };
-                    this.$root.bancoChecklists.push(novoChk);
-                    this.$root.registrarHistorico('Checklist Criado', 'Ajustes', `Novo checklist "${this.form.titulo}" adicionado.`);
+            this.sinc();
+            this.cancelarEdicao();
+            Swal.fire('Sucesso', 'Rotina salva com sucesso!', 'success');
+        },
+        rm(i) {
+            Swal.fire({
+                title: 'Excluir Rotina?',
+                text: "Esta ação não pode ser desfeita.",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#FF5252',
+                background: '#1E1E1E', color: '#FFF'
+            }).then(res => {
+                if (res.isConfirmed) {
+                    this.$root.bancoChecklists.splice(i, 1);
+                    this.sinc();
                 }
-
-                this.$root.salvarMemoriaLocal();
-                this.$root.vibrar([50, 50, 50]);
-                Swal.fire({ icon: 'success', title: 'Salvo com Sucesso!', timer: 1500, showConfirmButton: false, background: '#1E1E1E', color: '#FFF' });
-                this.fecharFormulario();
             });
         },
-
-        tentaRemoverChecklist(idChk, tituloChk) {
-            this.$root.vibrar(30);
-            
-            this.$root.autorizarAcao('remover', () => {
-                Swal.fire({
-                    title: 'Apagar Checklist?', text: `Deseja remover "${tituloChk}"? Esta ação não pode ser desfeita.`, icon: 'warning',
-                    showCancelButton: true, confirmButtonColor: '#FF5252', cancelButtonColor: '#444', confirmButtonText: 'Sim, Apagar', cancelButtonText: 'Cancelar', background: '#1E1E1E', color: '#FFF'
-                }).then((result) => {
-                    if (result.isConfirmed) {
-                        this.$root.bancoChecklists = this.$root.bancoChecklists.filter(c => c.id !== idChk);
-                        this.$root.registrarHistorico('Checklist Apagado', 'Ajustes', `A rotina "${tituloChk}" foi excluída.`);
-                        this.$root.salvarMemoriaLocal();
-                        this.$root.vibrar([50, 50, 50]);
-                        Swal.fire({ icon: 'success', title: 'Apagado!', timer: 1500, showConfirmButton: false, background: '#1E1E1E', color: '#FFF' });
-                    }
-                });
-            });
+        sinc() {
+            db.collection("configuracoes").doc("checklists").set({ lista: this.$root.bancoChecklists });
         }
     }
 });

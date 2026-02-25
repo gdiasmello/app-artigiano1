@@ -1,149 +1,270 @@
-// INÍCIO DO ARQUIVO modulos/massa.js - v0.0.88
+/**
+ * Produção de Massas v2.5.0
+ * Cálculo inteligente de produção baseado em metas e estoque.
+ */
 Vue.component('tela-massa', {
     template: `
-    <div class="container animate__animated animate__fadeInRight" style="padding-bottom:100px;">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:25px;">
-            <h2 style="margin:0;color:var(--text-main);">🍕 Produção</h2>
-            <button @click="$root.mudarTela('tela-dashboard')" style="background:none;border:none;color:var(--text-sec);font-size:1.5rem;"><i class="fas fa-arrow-left"></i></button>
-        </div>
-
-        <div class="card" style="border-left:5px solid var(--cor-primaria);">
-            <h4 style="margin-top:0;color:var(--text-main);">📅 Massa para: <span style="color:var(--cor-primaria);">{{ infoAlvo.nomeDia }}</span></h4>
-            <p style="margin:5px 0;color:var(--text-sec);"><i class="fas fa-thermometer-half" style="color:#FF5252;"></i> Geladeira: <b>{{ infoAlvo.temperatura }}</b></p>
-            <p style="margin:10px 0 5px 0;color:white;">🎯 Meta Base: <b>{{ analiseSmart.metaBase }}</b> massas</p>
-
-            <div style="display:flex;flex-direction:column;gap:5px;margin-top:10px;">
-                <div v-if="analiseSmart.isEspecial" style="background:rgba(255,171,0,0.2);border:1px solid var(--cor-primaria);padding:8px;border-radius:5px;color:var(--cor-primaria);font-size:0.85rem;">
-                    <i class="fas fa-glass-cheers"></i> Especial: {{ analiseSmart.nomeEvento }} (Usando meta Feriado)
-                </div>
-                <div v-if="analiseSmart.reducaoChuva" style="background:rgba(41,98,255,0.2);border:1px solid #2962FF;padding:8px;border-radius:5px;color:#82B1FF;font-size:0.85rem;">
-                    <i class="fas fa-cloud-rain"></i> Chuva Previsão (-20%)
-                </div>
-            </div>
-            <hr style="border-color:#333;margin:15px 0;">
-            <p style="margin:0;color:var(--cor-primaria);font-size:1.1rem;text-align:center;font-weight:bold;">= Meta Final: {{ analiseSmart.metaFinal }} massas</p>
-        </div>
-
-        <div style="margin-bottom:20px;">
-            <label style="color:var(--text-sec);font-size:0.9rem;display:block;margin-bottom:5px;">Massas prontas na geladeira <b>AGORA</b>?</label>
-            <input type="number" inputmode="numeric" v-model.number="sobrasManuais" @blur="enviarNuvem" placeholder="Ex: 40" style="width:100%;padding:15px;background:#2C2C2C;border:1px solid #444;border-radius:10px;color:white;font-size:1.2rem;box-sizing:border-box;text-align:center;">
-            
-            <div v-if="consumoNoite > 0 && sobrasBase > 0" class="animate__animated animate__fadeIn" style="margin-top:10px;background:rgba(255,171,0,0.1);border:1px dashed #FFAB00;padding:12px;border-radius:8px;font-size:0.85rem;color:#FFD54F;">
-                <i class="fas fa-clock" style="float:left;margin-right:10px;"></i>
-                <b>Turno em Andamento:</b> IA calcula saída de aprox. <b>{{ consumoNoite }} massas hoje</b>.<br>
-                <span style="color:white;display:block;margin-top:5px;border-top:1px solid rgba(255,171,0,0.3);padding-top:5px;">Sobras reais projetadas: <b>{{ sobrasCalculadas }}</b></span>
-            </div>
-        </div>
-
-        <div class="card animate__animated animate__fadeInUp" v-if="aProduzir > 0" style="background:#222;">
-            <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #333;padding-bottom:10px;margin-bottom:15px;">
-                <h3 style="color:var(--cor-primaria);margin:0;">Faltam: {{ aProduzir }}</h3>
-                <div style="text-align:right;">
-                    <label style="font-size:0.75rem;color:var(--text-sec);display:block;">LOTE SUGERIDO:</label>
-                    <select v-model="loteSelecionado" style="background:#111;color:white;border:1px solid var(--cor-primaria);padding:5px;border-radius:5px;font-weight:bold;">
-                        <option v-for="l in lotes" :value="l.massas">{{ l.massas }} Massas</option>
-                    </select>
-                </div>
-            </div>
-            
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;text-align:center;">
-                <div style="background:#1A1A1A;padding:10px;border-radius:8px;">🌾 Farinha<br><b style="color:white;font-size:1.2rem;">{{ loteAtual.farinha }} g</b></div>
-                <div style="background:#1A1A1A;padding:10px;border-radius:8px;">💧 Água Liq.<br><b style="color:#4FC3F7;font-size:1.2rem;">{{ loteAtual.aguaLiq }} g</b></div>
-                <div style="background:#1A1A1A;padding:10px;border-radius:8px;">🧊 Gelo<br><b style="color:#B3E5FC;font-size:1.2rem;">{{ loteAtual.gelo }} g</b></div>
-                <div style="background:#1A1A1A;padding:10px;border-radius:8px;">🧂 Sal<br><b style="color:white;font-size:1.2rem;">{{ loteAtual.sal }} g</b></div>
-                <div style="grid-column:span 2;background:#3E2723;padding:10px;border-radius:8px;border:1px solid #5D4037;">🦠 Levain<br><b style="color:#FFAB00;font-size:1.3rem;">{{ loteAtual.levain }} g</b></div>
-            </div>
-        </div>
-
-        <button class="btn" v-if="aProduzir > 0" style="background:#00C853;color:white;margin-top:10px;" @click="confirmarProd">
-            <i class="fas fa-check-circle"></i> CONFIRMAR PRODUÇÃO
-        </button>
+    <div class="container animate__animated animate__fadeInRight" v-if="$root.usuario" style="padding-bottom: 100px;">
         
-        <div v-if="aProduzir <= 0 && sobrasBase > 0" class="animate__animated animate__pulse" style="background:rgba(0,200,83,0.1);border:1px dashed #00C853;padding:15px;border-radius:8px;text-align:center;margin-top:15px;">
-            <p style="color:#00C853;margin:0;"><i class="fas fa-thumbs-up"></i> Metas batidas! Produção desnecessária.</p>
+        <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 25px;">
+            <button @click="$root.mudarTela('tela-dashboard')" style="background: none; border: none; color: #AAA; font-size: 1.5rem; cursor: pointer;">
+                <i class="fas fa-arrow-left"></i>
+            </button>
+            <div>
+                <h2 style="margin: 0; color: var(--cor-primaria);"><i class="fas fa-pizza-slice"></i> Produção de Massas</h2>
+                <p v-if="eventoDeHoje" style="margin: 5px 0 0 0; color: #2979FF; font-size: 0.8rem; font-weight: bold;">
+                    <i class="fas fa-star"></i> IA: Meta +{{ eventoDeHoje.multiplicador }}% (Evento: {{ eventoDeHoje.nome }})
+                </p>
+                <p v-else-if="isFeriado" style="margin: 5px 0 0 0; color: #00E676; font-size: 0.8rem; font-weight: bold;">
+                    <i class="fas fa-robot"></i> IA: Meta +{{ $root.multiplicadoresProducao.feriado }}% (Feriado: {{ nomeFeriado }})
+                </p>
+                <p v-else-if="isVespera" style="margin: 5px 0 0 0; color: #00E676; font-size: 0.8rem; font-weight: bold;">
+                    <i class="fas fa-robot"></i> IA: Meta +{{ $root.multiplicadoresProducao.vespera }}% (Véspera de {{ nomeFeriado }})
+                </p>
+                <p v-else-if="ajusteClima !== 0" style="margin: 5px 0 0 0; color: #00B0FF; font-size: 0.8rem; font-weight: bold;">
+                    <i class="fas fa-cloud-sun-rain"></i> IA: Meta {{ ajusteClima > 0 ? '+' : '' }}{{ ajusteClima }}% (Smart Clima)
+                </p>
+            </div>
+        </div>
+
+        <div class="card" style="padding: 25px; text-align: center; border-top: 5px solid var(--cor-primaria);">
+            <label style="color: #AAA; font-size: 0.85rem; font-weight: bold; display: block; margin-bottom: 15px;">QUANTAS MASSAS PRONTAS TEMOS AGORA?</label>
+            <input type="number" v-model.number="estoqueAtual" placeholder="Ex: 20" class="input-dark" style="text-align: center; font-size: 2.5rem; font-weight: 900; color: var(--cor-primaria);">
+
+            <div v-if="estoqueAtual !== ''" class="animate__animated animate__fadeIn" style="margin-top: 30px; padding: 20px; background: #1A1A1A; border-radius: 12px; border: 1px dashed #444;">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 15px;">
+                    <span style="color: #888;">Meta de Hoje:</span>
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <strong style="color: white; font-size: 1.2rem;">{{ metaCalculada }} massas</strong>
+                        <button @click="sugerirComIA" class="btn-ia-sugestao">
+                            <i class="fas fa-brain"></i> Sugerir com IA
+                        </button>
+                    </div>
+                </div>
+                
+                <div style="padding-top: 15px; border-top: 1px solid #333;">
+                    <span style="color: #888; display: block; margin-bottom: 5px;">A IA recomenda produzir:</span>
+                    <div style="font-size: 3.5rem; font-weight: 900; color: var(--cor-primaria);">{{ producaoNecessaria }}</div>
+                    
+                    <div v-if="producaoNecessaria > 0" class="card-batidas">
+                        <i class="fas fa-blender"></i>
+                        <div style="flex: 1;">
+                            <strong>FAÇA {{ batidas }} BATIDAS</strong>
+                            <span>(Considerando 30 massas por batida)</span>
+                        </div>
+                        <button @click="showRecipe = !showRecipe" class="btn-mini">
+                            {{ showRecipe ? 'OCULTAR' : 'VER RECEITA' }}
+                        </button>
+                    </div>
+
+                    <!-- Receita Detalhada -->
+                    <div v-if="showRecipe && producaoNecessaria > 0" class="animate__animated animate__fadeIn" style="margin-top: 15px; text-align: left; background: #222; padding: 15px; border-radius: 8px; font-size: 0.85rem;">
+                        <h5 style="color: var(--cor-primaria); margin: 0 0 10px 0; border-bottom: 1px solid #333; padding-bottom: 5px;">
+                            RECEITA PARA {{ loteSelecionado }} MASSAS ({{ batidas }} batida{{ batidas > 1 ? 's' : '' }})
+                        </h5>
+                        <ul style="list-style: none; padding: 0; margin: 0; color: #CCC;">
+                            <li>🍞 Farinha: <strong>{{ (receitasMassa[loteSelecionado].farinha * batidas).toLocaleString() }} g</strong></li>
+                            <li>💧 Água Líquida (70%): <strong>{{ (receitasMassa[loteSelecionado].aguaLiquida * batidas).toLocaleString() }} g</strong></li>
+                            <li>❄️ Gelo (30%): <strong>{{ (receitasMassa[loteSelecionado].gelo * batidas).toLocaleString() }} g</strong></li>
+                            <li>🧬 Levain: <strong>{{ (receitasMassa[loteSelecionado].levain * batidas).toLocaleString() }} g</strong></li>
+                            <li>🧂 Sal: <strong>{{ (receitasMassa[loteSelecionado].sal * batidas).toLocaleString() }} g</strong></li>
+                        </ul>
+                        <p style="margin: 10px 0 0 0; font-size: 0.7rem; color: #666; font-style: italic;">
+                            * Padrão: 220g por bolinha | 6 bolinhas por bandeja.
+                        </p>
+                    </div>
+                    
+                    <div v-else-if="producaoNecessaria <= 0" style="color: #00E676; font-weight: bold; margin-top: 15px;">
+                        <i class="fas fa-check-circle"></i> Meta atingida!
+                    </div>
+                </div>
+            </div>
+
+            <button @click="salvar" class="btn" style="background: var(--cor-primaria); color: #121212; margin-top: 30px; height: 60px;">
+                <i class="fas fa-save"></i> REGISTRAR E FINALIZAR
+            </button>
         </div>
     </div>
     `,
-    data() {
-        return {
-            sobrasManuais: '', loteSelecionado: null,
-            lotes: [
-                { massas:15, farinha:2000, aguaLiq:873, gelo:374, levain:90, sal:60 }, { massas:30, farinha:4000, aguaLiq:1746, gelo:748, levain:180, sal:120 },
-                { massas:45, farinha:6000, aguaLiq:2619, gelo:1123, levain:270, sal:180 }, { massas:60, farinha:8000, aguaLiq:3492, gelo:1497, levain:360, sal:240 },
-                { massas:75, farinha:10000, aguaLiq:4366, gelo:1871, levain:450, sal:300 }, { massas:90, farinha:12000, aguaLiq:5239, gelo:2245, levain:540, sal:360 },
-                { massas:110, farinha:14000, aguaLiq:6112, gelo:2620, levain:630, sal:420 }
-            ]
-        };
-    },
+    data() { return { 
+        estoqueAtual: '', 
+        showRecipe: false,
+        receitasMassa: {
+            15: { farinha: 2000, aguaLiquida: 873, gelo: 374, levain: 90, sal: 60, totalAgua: 1247 },
+            30: { farinha: 4000, aguaLiquida: 1746, gelo: 748, levain: 180, sal: 120, totalAgua: 2494 },
+            45: { farinha: 6000, aguaLiquida: 2619, gelo: 1123, levain: 270, sal: 180, totalAgua: 3742 },
+            60: { farinha: 8000, aguaLiquida: 3492, gelo: 1497, levain: 360, sal: 240, totalAgua: 4989 },
+            75: { farinha: 10000, aguaLiquida: 4366, gelo: 1871, levain: 450, sal: 300, totalAgua: 6237 },
+            90: { farinha: 12000, aguaLiquida: 5239, gelo: 2245, levain: 540, sal: 360, totalAgua: 7484 },
+            110: { farinha: 14000, aguaLiquida: 6112, gelo: 2620, levain: 630, sal: 420, totalAgua: 8732 }
+        }
+    }; },
     computed: {
-        infoAlvo() {
-            const dias = ['Domingo','Segunda-feira','Terça-feira','Quarta-feira','Quinta-feira','Sexta-feira','Sábado'];
-            const hj = new Date().getDay(); let a = hj+1; let s = 1; let temp = '19°C-20°C (24h)';
-            if(hj === 1){ a=3; s=2; temp='14°C-15°C (48h)'; } if(a>6) a=0;
-            return { nomeDia: dias[a], index: a, saltos: s, temperatura: temp };
+        isVespera() {
+            const amanha = new Date(); amanha.setDate(amanha.getDate() + 1);
+            const dataAmanha = amanha.toISOString().split('T')[0];
+            return this.$root.feriados.some(f => f.data === dataAmanha);
         },
-        analiseSmart() {
-            const dA = new Date(); dA.setDate(dA.getDate() + this.infoAlvo.saltos); const dAs = dA.toISOString().split('T')[0];
-            const dP = new Date(dA); dP.setDate(dP.getDate() + 1); const dPs = dP.toISOString().split('T')[0];
-
-            let metaBase = this.$root.metas[this.infoAlvo.index];
-            // 🟢 AGORA A IA USA A NOVA META EXCLUSIVA DE FERIADOS
-            const metaEsp = this.$root.metas.feriado || 130; 
-            let isEsp = false; let metaCalc = metaBase; let nEvt = '';
-
-            const fer = this.$root.feriados.find(f => (f.data||f) === dAs || (f.data||f) === dPs);
-            if(fer) { isEsp = true; nEvt = fer.nome || 'Evento'; metaCalc = metaEsp; }
-
-            let redChuva = false;
-            if(this.$root.clima.modoSmart && this.$root.clima.riscoChuvaNoturna) { redChuva = true; metaCalc = metaCalc - Math.round(metaCalc * 0.20); }
-            return { metaBase, metaFinal: metaCalc, isEspecial: isEsp, nomeEvento: nEvt, reducaoChuva: redChuva };
+        isFeriado() {
+            const hoje = new Date().toISOString().split('T')[0];
+            return this.$root.feriados.some(f => f.data === hoje);
         },
-        consumoNoite() {
-            const mAt = new Date().getHours() * 60 + new Date().getMinutes();
-            const iT = 18*60; const fT = 23*60+30; let mR = 0;
-            if(mAt < iT && mAt > 6*60) mR = fT - iT; else if(mAt >= iT && mAt <= fT) mR = fT - mAt;
-            return Math.floor(mR / 30) * 6; 
+        eventoDeHoje() {
+            const hoje = new Date().toISOString().split('T')[0];
+            return this.$root.eventosEspeciais.find(e => e.data === hoje);
         },
-        sobrasBase() { return (this.sobrasManuais !== '' && this.sobrasManuais !== null) ? Number(this.sobrasManuais) : (this.$root.estoqueMassasHoje > 0 ? this.$root.estoqueMassasHoje : 0); },
-        sobrasCalculadas() { const s = this.sobrasBase - this.consumoNoite; return s > 0 ? s : 0; },
-        aProduzir() { const c = this.analiseSmart.metaFinal - this.sobrasCalculadas; return c > 0 ? c : 0; },
-        loteAtual() { return this.lotes.find(l => l.massas === this.loteSelecionado) || this.lotes.find(l => l.massas >= this.aProduzir) || this.lotes[this.lotes.length-1]; }
-    },
-    watch: { aProduzir(n) { if(n > 0) this.loteSelecionado = (this.lotes.find(l => l.massas >= n) || this.lotes[this.lotes.length-1]).massas; } },
-    mounted() { 
-        if(this.$root.estoqueMassasHoje > 0) this.sobrasManuais = this.$root.estoqueMassasHoje;
-        if(this.aProduzir > 0) this.loteSelecionado = (this.lotes.find(l => l.massas >= this.aProduzir) || this.lotes[this.lotes.length-1]).massas; 
+        nomeFeriado() {
+            const hoje = new Date().toISOString().split('T')[0];
+            const amanha = new Date(); amanha.setDate(amanha.getDate() + 1);
+            const dataAmanha = amanha.toISOString().split('T')[0];
+            
+            const feriadoHoje = this.$root.feriados.find(f => f.data === hoje);
+            if (feriadoHoje) return feriadoHoje.nome;
 
-        // 🟢 ESCUTA DA NUVEM (Se alguém alterar noutro aparelho, atualiza o ecrã)
-        db.collection("operacao").doc("producao").onSnapshot((doc) => {
-            if(doc.exists) {
-                const d = doc.data(); const hj = new Date().toISOString().split('T')[0];
-                if(d.dataEstoqueMassas === hj) {
-                    this.$root.estoqueMassasHoje = d.estoqueMassasHoje;
-                    this.sobrasManuais = d.estoqueMassasHoje;
+            const feriadoAmanha = this.$root.feriados.find(f => f.data === dataAmanha);
+            return feriadoAmanha ? feriadoAmanha.nome : '';
+        },
+        metaCalculada() {
+            const dia = new Date().getDay();
+            let meta = this.$root.metas[dia] || 80;
+            
+            if (this.eventoDeHoje) {
+                const mult = (this.eventoDeHoje.multiplicador || 0) / 100;
+                meta = Math.ceil(meta * (1 + mult));
+            } else if (this.isFeriado) {
+                const mult = (this.$root.multiplicadoresProducao.feriado || 0) / 100;
+                meta = Math.ceil(meta * (1 + mult));
+            } else if (this.isVespera) {
+                const mult = (this.$root.multiplicadoresProducao.vespera || 0) / 100;
+                meta = Math.ceil(meta * (1 + mult));
+            }
+
+            // Aplica ajuste de clima se o modo smart estiver ativo
+            if (this.$root.clima.modoSmart && this.ajusteClima !== 0) {
+                meta = Math.ceil(meta * (1 + this.ajusteClima / 100));
+            }
+
+            return meta;
+        },
+        ajusteClima() {
+            if (!this.$root.clima.modoSmart) return 0;
+
+            let ajuste = 0;
+            if (this.$root.clima.isCalor) ajuste -= 10; // Reduz 10% em dias quentes
+            if (this.$root.clima.vaiChoverPico) ajuste += 20; // Aumenta 20% se houver previsão de chuva no pico
+
+            return ajuste;
+        },
+        producaoNecessaria() {
+            if (this.estoqueAtual === '') return 0;
+            const falta = this.metaCalculada - this.estoqueAtual;
+            return falta > 0 ? falta : 0;
+        },
+        loteSelecionado() {
+            if (this.producaoNecessaria <= 0) return 0;
+            const lotesDisponiveis = Object.keys(this.receitasMassa).map(Number).sort((a, b) => a - b);
+            for (const lote of lotesDisponiveis) {
+                if (lote >= this.producaoNecessaria) {
+                    return lote;
                 }
             }
-        });
-    },
-    methods: { 
-        enviarNuvem() { // 🟢 ENVIA P/ NUVEM AO DIGITAR
-            if(this.sobrasManuais !== '' && this.sobrasManuais >= 0) {
-                const hj = new Date().toISOString().split('T')[0];
-                db.collection("operacao").doc("producao").set({ estoqueMassasHoje: Number(this.sobrasManuais), dataEstoqueMassas: hj, user: this.$root.usuario.nome }, { merge: true });
-                this.$root.estoqueMassasHoje = Number(this.sobrasManuais);
-            }
+            // Se a produção necessária for maior que o maior lote, retorna o maior lote
+            return lotesDisponiveis[lotesDisponiveis.length - 1];
         },
-        confirmarProd() { 
+        batidas() {
+            if (this.producaoNecessaria <= 0) return 0;
+            // Calcula o número de 'batidas' com base no lote selecionado
+            return Math.ceil(this.producaoNecessaria / this.loteSelecionado);
+        }
+    },
+    methods: {
+        sugerirComIA() {
             this.$root.vibrar(30);
-            Swal.fire({ title:'Confirmar', html:`Registar lote de <b><span style="color:var(--cor-primaria);">${this.loteSelecionado}</span></b> massas?`, showCancelButton:true, confirmButtonColor:'#00C853', background:'#1E1E1E', color:'#FFF' })
-            .then((r) => {
-                if(r.isConfirmed) {
-                    if(this.sobrasManuais !== '' && Number(this.sobrasManuais) !== this.$root.estoqueMassasHoje) this.enviarNuvem();
-                    this.$root.registrarHistorico('Lote Produzido', 'Produção', `Lote: ${this.loteSelecionado}. Contagem: ${this.sobrasManuais||0}`);
-                    Swal.fire({ icon:'success', title:'Registado!', timer:1500, showConfirmButton:false, background:'#1E1E1E' }).then(() => this.$root.mudarTela('tela-dashboard'));
-                }
+            const historico = this.$root.historicoGlobais.filter(h => h.setor === 'Massa' && h.acao === 'Produção');
+            const prompt = `Como assistente de uma pizzaria, analise os dados e sugira uma meta de produção de massas para hoje. Considere o seguinte contexto:\n- Dia da semana: ${new Date().toLocaleDateString('pt-BR', { weekday: 'long' })}\n- Clima: ${this.$root.clima.temperatura}°C, ${this.$root.clima.vaiChoverPico ? 'com chuva prevista' : 'sem chuva'}\n- Evento: ${this.eventoDeHoje ? this.eventoDeHoje.nome : (this.isFeriado ? `Feriado (${this.nomeFeriado})` : 'Nenhum')}\n- Histórico de produção recente (estoque | meta | a produzir):\n${historico.slice(0, 10).map(h => `- ${h.dataStr}: ${h.detalhes}`).join('\n')}\n\nSugira um número final para a meta de massas, justificando brevemente.`;
+
+            Swal.fire({ 
+                title: 'Analisando...', 
+                html: '<i class="fas fa-brain fa-spin"></i> A IA está processando os dados...',
+                allowOutsideClick: false, 
+                background: '#1E1E1E', color: '#FFF',
+                didOpen: () => { Swal.showLoading(); }
             });
-        } 
+
+            window.gemini.getGenerativeModel({ model: 'gemini-pro' }).generateContent(prompt)
+                .then(result => {
+                    Swal.close();
+                    const numeroSugerido = result.response.text().match(/\d+/);
+                    if (numeroSugerido) {
+                        Swal.fire({
+                            title: 'Sugestão da IA',
+                            html: `A IA sugere uma meta de <strong>${numeroSugerido[0]} massas</strong>. <p style='font-size:0.8rem; text-align:left; margin-top:15px;'>${result.response.text()}</p>`,
+                            icon: 'info',
+                            showCancelButton: true,
+                            confirmButtonText: 'Aplicar Sugestão',
+                            cancelButtonText: 'Manter Atual',
+                            background: '#1E1E1E', color: '#FFF'
+                        }).then(res => {
+                            if (res.isConfirmed) {
+                                const dia = new Date().getDay();
+                                this.$set(this.$root.metas, dia, parseInt(numeroSugerido[0]));
+                                this.$root.registrarHistorico('IA', 'Massa', `Meta ajustada para ${numeroSugerido[0]} massas.`);
+                            }
+                        });
+                    } else {
+                        Swal.fire('Erro', 'Não foi possível extrair um número da sugestão.', 'error');
+                    }
+                }).catch(err => {
+                    console.error(err);
+                    Swal.fire('Erro de IA', 'Não foi possível conectar com a IA.', 'error');
+                });
+        },
+        salvar() {
+            if (this.estoqueAtual === '') {
+                Swal.fire({ icon: 'warning', text: 'Informe o estoque atual.', background: '#1E1E1E' });
+                return;
+            }
+            this.$root.estoqueMassasHoje = this.estoqueAtual;
+            this.$root.dataEstoqueMassas = new Date().toLocaleDateString('pt-BR');
+            
+            const msg = `Estoque: ${this.estoqueAtual} | Meta: ${this.metaCalculada} | Produzir: ${this.producaoNecessaria} (${this.batidas} batidas)`;
+            this.$root.registrarHistorico('Produção', 'Massa', msg);
+            this.$root.salvarMemoriaLocal();
+            
+            Swal.fire({ 
+                icon: 'success', 
+                title: 'Produção Registrada!', 
+                text: this.producaoNecessaria > 0 ? `Bora fazer essas ${this.batidas} batidas!` : 'Estoque em dia!',
+                background: '#1E1E1E',
+                confirmButtonColor: '#FFAB00'
+            }).then(() => this.$root.mudarTela('tela-dashboard'));
+        }
+    },
+    mounted() {
+        if (!document.getElementById('css-massa-batidas')) {
+            const style = document.createElement('style');
+            style.id = 'css-massa-batidas';
+            style.innerHTML = `
+                .card-batidas { 
+                    margin-top: 20px; 
+                    background: rgba(0, 176, 255, 0.1); 
+                    border: 1px solid #00B0FF; 
+                    padding: 15px; 
+                    border-radius: 10px; 
+                    display: flex; 
+                    align-items: center; 
+                    gap: 15px; 
+                    text-align: left;
+                    color: #00B0FF;
+                }
+                .card-batidas i { font-size: 2rem; }
+                .card-batidas strong { display: block; font-size: 1.1rem; }
+                .card-batidas span { font-size: 0.75rem; opacity: 0.8; }
+                .btn-mini { background: var(--cor-primaria); color: #121212; border: none; padding: 5px 10px; border-radius: 5px; font-size: 0.7rem; font-weight: bold; cursor: pointer; }
+                .btn-ia-sugestao { background: none; border: 1px solid #673AB7; color: #673AB7; padding: 5px 10px; border-radius: 20px; font-size: 0.7rem; font-weight: bold; cursor: pointer; transition: all 0.2s; }
+                .btn-ia-sugestao:hover { background: #673AB7; color: white; }
+            `;
+            document.head.appendChild(style);
+        }
     }
 });
-// FIM DO ARQUIVO modulos/massa.js

@@ -1,272 +1,205 @@
-// INÍCIO DO ARQUIVO modulos/ajustes_equipe.js - v2.1.2
+/**
+ * Gestão de Equipe v2.14.0
+ */
 Vue.component('tela-ajustes-equipe', {
     template: `
     <div class="container animate__animated animate__fadeInRight" v-if="$root.usuario" style="padding-bottom: 100px;">
-        
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px;">
-            <h2 style="margin: 0; color: #FF5252;"><i class="fas fa-users-cog"></i> Gestão de Equipe</h2>
-            <button @click="$root.mudarTela('tela-ajustes')" style="background: none; border: none; color: #AAA; font-size: 1.5rem; cursor: pointer;">
-                <i class="fas fa-arrow-left"></i>
-            </button>
+            <h2 style="margin: 0; color: #FF5252;"><i class="fas fa-users-cog"></i> Painel de Controle</h2>
+            <div style="display: flex; gap: 15px;">
+                <button v-if="$root.usuario.permissoes.admin" @click="togglePins" style="background: none; border: none; color: #AAA; font-size: 1.2rem; cursor: pointer;">
+                    <i :class="showPins ? 'fas fa-eye-slash' : 'fas fa-eye'"></i>
+                </button>
+                <button @click="$root.mudarTela('tela-ajustes')" style="background: none; border: none; color: #AAA; font-size: 1.5rem; cursor: pointer;"><i class="fas fa-arrow-left"></i></button>
+            </div>
         </div>
 
-        <div v-if="$root.pedidosResetSenha && $root.pedidosResetSenha.length > 0" class="card animate__animated animate__pulse" style="padding: 20px; border-left: 4px solid #FFAB00; margin-bottom: 20px; background: rgba(255, 171, 0, 0.1);">
-            <h4 style="margin-top: 0; color: #FFAB00;"><i class="fas fa-key"></i> Pedidos de Reset de Senha</h4>
-            <div v-for="(pedido, idx) in $root.pedidosResetSenha" :key="pedido.id" style="display: flex; justify-content: space-between; align-items: center; background: #222; padding: 10px; border-radius: 8px; margin-bottom: 8px;">
+        <!-- Pedidos de Reset -->
+        <div v-if="$root.pedidosResetSenha.length > 0" class="card" style="padding: 20px; border-left: 5px solid #FFAB00; background: rgba(255,171,0,0.05); margin-bottom: 25px;">
+            <h4 style="margin-top: 0; color: #FFAB00;"><i class="fas fa-key"></i> Pedidos de Reset Pendentes</h4>
+            <div v-for="(p, i) in $root.pedidosResetSenha" :key="p.id" style="display: flex; justify-content: space-between; align-items: center; background: #222; padding: 12px; border-radius: 10px; margin-bottom: 10px;">
+                <div style="flex: 1;">
+                    <strong style="color: white; display: block;">{{ p.nome }}</strong>
+                    <span style="color: #666; font-size: 0.7rem;">Solicitado em: {{ p.dataStr }}</span>
+                </div>
+                <div style="display: flex; gap: 8px;">
+                    <button @click="aprovarReset(p, i)" class="btn-small" style="background: #00E676; color: #121212;">REDEFINIR</button>
+                    <button @click="negarReset(i)" class="btn-small" style="background: #FF5252; color: white;">X</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Cadastro Simplificado -->
+        <div class="card" style="padding: 20px; border-top: 5px solid #FF5252; margin-bottom: 30px;">
+            <h4 style="margin-top: 0; color: white;">Adicionar Funcionário</h4>
+            <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+                <input type="text" v-model="novo.nome" placeholder="Nome de Login" class="input-dark" style="flex: 2;">
+                <select v-model="novo.cargo" class="input-dark" style="flex: 1;">
+                    <option value="Atendente">Atendente</option>
+                    <option value="Pizzaiolo">Pizzaiolo</option>
+                    <option value="Gerente">Gerente</option>
+                </select>
+            </div>
+            <p style="color: #666; font-size: 0.75rem; margin-bottom: 15px;">* A senha padrão inicial será <b>1234</b>.</p>
+            <button @click="addMembro" class="btn" style="background: #FF5252; color: white;">CADASTRAR FUNCIONÁRIO</button>
+        </div>
+
+        <!-- Lista de Funcionários com Gestão de Permissões -->
+        <h3 style="color: white; font-size: 1rem; margin-bottom: 15px;">Gestão de Acessos</h3>
+        <div v-for="(m, i) in $root.equipe" :key="m.id" class="card" style="padding: 15px; margin-bottom: 15px; background: #1A1A1A;">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px;">
                 <div>
-                    <strong style="color: white; text-transform: capitalize;">{{ pedido.nome }}</strong>
-                    <span style="color: #888; font-size: 0.8rem; display: block;">Solicitado em: {{ pedido.dataStr }}</span>
+                    <strong style="color: white; font-size: 1.1rem;">{{ m.nome }}</strong>
+                    <div style="font-size: 0.75rem; color: #AAA; margin-top: 4px;">
+                        {{ m.cargo }} | 
+                        <span :style="{ color: showPins ? '#FFAB00' : '#444' }">PIN: {{ showPins ? m.pin : '****' }}</span>
+                    </div>
                 </div>
-                <div style="display: flex; gap: 10px;">
-                    <button @click="aprovarReset(pedido, idx)" style="background: #00E676; color: #121212; border: none; padding: 8px 12px; border-radius: 6px; font-weight: bold; cursor: pointer;">Aprovar</button>
-                    <button @click="negarReset(idx)" style="background: #FF5252; color: white; border: none; padding: 8px 12px; border-radius: 6px; font-weight: bold; cursor: pointer;">Negar</button>
-                </div>
-            </div>
-        </div>
-
-        <div class="card" style="padding: 20px; border-top: 4px solid #FF5252; margin-bottom: 20px;">
-            <h4 style="margin-top: 0; color: white; margin-bottom: 20px;"><i class="fas fa-user-plus"></i> Novo Funcionário</h4>
-            
-            <label class="label-form">NOME CURTO (Para Login)</label>
-            <input type="text" v-model="novoNome" placeholder="Ex: vitor" class="input-form">
-            
-            <label class="label-form">CARGO / FUNÇÃO (Preenche permissões automaticamente)</label>
-            <select v-model="novoCargo" class="input-form">
-                <option value="Atendente">Atendente</option>
-                <option value="Pizzaiolo">Pizzaiolo</option>
-                <option value="Auxiliar">Auxiliar</option>
-                <option value="Gerente">Gerente / Admin</option>
-            </select>
-
-            <div style="background: #1A1A1A; border: 1px solid #333; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
-                <label class="label-form" style="margin-bottom: 10px; color: #00E676;"><i class="fas fa-lock-open"></i> PERMISSÕES DE ACESSO</label>
-                
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-                    <label class="checkbox-label"><input type="checkbox" v-model="novasPermissoes.producao"> Produção (Massa)</label>
-                    <label class="checkbox-label"><input type="checkbox" v-model="novasPermissoes.pedidos"> Fazer Pedidos</label>
-                    <label class="checkbox-label"><input type="checkbox" v-model="novasPermissoes.limpeza"> Limpeza</label>
-                    <label class="checkbox-label"><input type="checkbox" v-model="novasPermissoes.historico"> Ver Auditoria</label>
-                    <label class="checkbox-label"><input type="checkbox" v-model="novasPermissoes.avisos"> Criar Avisos</label>
-                    <label class="checkbox-label"><input type="checkbox" v-model="novasPermissoes.gerenciar"> Editar Produtos</label>
-                    <label class="checkbox-label" style="grid-column: span 2; color: #FF5252; font-weight: bold;">
-                        <input type="checkbox" v-model="novasPermissoes.admin"> Administrador Total
-                    </label>
-                </div>
-            </div>
-
-            <button @click="adicionarMembro" class="btn" style="background: #FF5252; color: white; font-weight: bold; height: 55px;">
-                CADASTRAR E SINCRONIZAR
-            </button>
-        </div>
-
-        <h4 style="color: #AAA; margin-bottom: 10px; font-size: 0.9rem;">EQUIPE ATUAL ({{ $root.equipe.length }})</h4>
-        
-        <div v-for="(membro, idx) in $root.equipe" :key="membro.id" class="card" style="padding: 15px; margin-bottom: 10px; border-left: 4px solid #444;">
-            
-            <div style="display: flex; justify-content: space-between; align-items: flex-start;">
-                <div>
-                    <strong style="color: white; font-size: 1.1rem; display: block; text-transform: capitalize;">{{ membro.nome }}</strong>
-                    <span style="color: #888; font-size: 0.85rem; display: block; margin-top: 3px;">Cargo: {{ membro.cargo }}</span>
-                    <span style="color: #888; font-size: 0.85rem; display: block; margin-top: 3px;">PIN: <b style="color: #FFAB00; letter-spacing: 2px;">{{ membro.pin }}</b></span>
-                    
-                    <span v-if="membro.termoAceito" style="color: #00E676; font-size: 0.75rem; display: block; margin-top: 5px;">
-                        <i class="fas fa-check-circle"></i> Termo assinado
-                    </span>
-                    <span v-else style="color: #FF5252; font-size: 0.75rem; display: block; margin-top: 5px;">
-                        <i class="fas fa-clock"></i> Pendente assinatura
-                    </span>
-                </div>
-                
-                <div style="display: flex; gap: 10px;" v-if="membro.id !== $root.usuario.id && membro.id !== 'master_key'">
-                    <button @click="toggleEditarPermissoes(membro.id)" style="background: #2962FF; border: none; color: white; width: 40px; height: 40px; border-radius: 8px; cursor: pointer;" title="Editar Permissões">
-                        <i class="fas fa-user-shield"></i>
-                    </button>
-                    <button @click="resetarPin(membro)" style="background: #333; border: 1px solid #555; color: white; width: 40px; height: 40px; border-radius: 8px; cursor: pointer;" title="Resetar PIN para 1234">
-                        <i class="fas fa-undo"></i>
-                    </button>
-                    <button @click="removerMembro(idx)" style="background: rgba(255,82,82,0.1); border: 1px solid #FF5252; color: #FF5252; width: 40px; height: 40px; border-radius: 8px; cursor: pointer;" title="Excluir">
-                        <i class="fas fa-trash-alt"></i>
-                    </button>
-                </div>
-            </div>
-
-            <div v-if="editandoId === membro.id" class="animate__animated animate__fadeIn" style="margin-top: 15px; padding-top: 15px; border-top: 1px dashed #444;">
-                <label style="color: #00B0FF; font-size: 0.8rem; font-weight: bold; display: block; margin-bottom: 10px;">EDITAR ACESSOS DE {{ membro.nome.toUpperCase() }}</label>
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 15px;">
-                    <label class="checkbox-label"><input type="checkbox" v-model="membro.permissoes.producao"> Produção</label>
-                    <label class="checkbox-label"><input type="checkbox" v-model="membro.permissoes.pedidos"> Pedidos</label>
-                    <label class="checkbox-label"><input type="checkbox" v-model="membro.permissoes.limpeza"> Limpeza</label>
-                    <label class="checkbox-label"><input type="checkbox" v-model="membro.permissoes.historico"> Auditoria</label>
-                    <label class="checkbox-label"><input type="checkbox" v-model="membro.permissoes.avisos"> Avisos</label>
-                    <label class="checkbox-label"><input type="checkbox" v-model="membro.permissoes.gerenciar"> Edição ERP</label>
-                    <label class="checkbox-label" style="grid-column: span 2; color: #FF5252;"><input type="checkbox" v-model="membro.permissoes.admin"> Admin Total</label>
-                </div>
-                <button @click="salvarEdicao(membro)" class="btn" style="background: #00B0FF; color: white; font-weight: bold;">
-                    SALVAR ALTERAÇÕES
+                <button v-if="m.id !== $root.usuario.id" @click="removerMembro(i)" style="background: none; border: none; color: #FF5252; cursor: pointer; padding: 5px;">
+                    <i class="fas fa-trash"></i>
                 </button>
             </div>
 
+            <!-- Toggles de Permissão -->
+            <div class="grid-permissoes">
+                <div class="perm-item" @click="togglePerm(m, 'verMassa')">
+                    <i class="fas fa-pizza-slice" :class="{ 'active': m.permissoes.verMassa }"></i>
+                    <span>Massa</span>
+                </div>
+                <div class="perm-item" @click="togglePerm(m, 'verSacolao')">
+                    <i class="fas fa-carrot" :class="{ 'active': m.permissoes.verSacolao }"></i>
+                    <span>Sacolão</span>
+                </div>
+                <div class="perm-item" @click="togglePerm(m, 'verInsumos')">
+                    <i class="fas fa-box-open" :class="{ 'active': m.permissoes.verInsumos }"></i>
+                    <span>Insumos</span>
+                </div>
+                <div class="perm-item" @click="togglePerm(m, 'verGelo')">
+                    <i class="fas fa-snowflake" :class="{ 'active': m.permissoes.verGelo }"></i>
+                    <span>Gelo</span>
+                </div>
+                <div class="perm-item" @click="togglePerm(m, 'verLimpeza')">
+                    <i class="fas fa-broom" :class="{ 'active': m.permissoes.verLimpeza }"></i>
+                    <span>Limpeza</span>
+                </div>
+                <div class="perm-item" @click="togglePerm(m, 'verHistorico')">
+                    <i class="fas fa-history" :class="{ 'active': m.permissoes.verHistorico }"></i>
+                    <span>Histórico</span>
+                </div>
+                <div class="perm-item" @click="togglePerm(m, 'apagarHistorico')">
+                    <i class="fas fa-eraser" :class="{ 'active': m.permissoes.apagarHistorico }"></i>
+                    <span>Apagar</span>
+                </div>
+                <div class="perm-item" @click="togglePerm(m, 'admin')">
+                    <i class="fas fa-user-shield" :class="{ 'active': m.permissoes.admin }"></i>
+                    <span>Admin</span>
+                </div>
+            </div>
         </div>
     </div>
     `,
-    data() {
-        return {
-            novoNome: '',
-            novoCargo: 'Atendente',
-            novasPermissoes: {
-                producao: false, pedidos: true, limpeza: true, historico: false, avisos: false, gerenciar: false, admin: false
-            },
-            editandoId: null
-        };
-    },
-    watch: {
-        // Preenche automaticamente as permissões quando o Gerente troca o cargo no select
-        novoCargo(cargo) {
-            if (cargo === 'Gerente') {
-                this.novasPermissoes = { producao: true, pedidos: true, limpeza: true, historico: true, avisos: true, gerenciar: true, admin: true };
-            } else if (cargo === 'Pizzaiolo') {
-                this.novasPermissoes = { producao: true, pedidos: true, limpeza: true, historico: false, avisos: false, gerenciar: false, admin: false };
-            } else if (cargo === 'Atendente') {
-                this.novasPermissoes = { producao: false, pedidos: true, limpeza: true, historico: false, avisos: false, gerenciar: false, admin: false };
-            } else { // Auxiliar
-                this.novasPermissoes = { producao: false, pedidos: false, limpeza: true, historico: false, avisos: false, gerenciar: false, admin: false };
-            }
-        }
+    data() { 
+        return { 
+            novo: { nome: '', cargo: 'Atendente' }, 
+            showPins: false 
+        }; 
     },
     methods: {
-        adicionarMembro() {
-            if (!this.novoNome.trim()) {
-                Swal.fire({ icon: 'warning', text: 'Preencha o nome do funcionário.', background: '#1E1E1E', color: '#FFF' });
-                return;
-            }
-
-            const nomeLimpo = this.novoNome.trim().toLowerCase();
-            
-            if (this.$root.equipe.find(u => u.nome === nomeLimpo)) {
-                Swal.fire({ icon: 'error', title: 'Atenção', text: 'Já existe um funcionário com esse nome!', background: '#1E1E1E', color: '#FFF' });
-                return;
-            }
-            
-            const novo = {
-                id: Date.now().toString(),
-                nome: nomeLimpo,
-                cargo: this.novoCargo,
-                pin: '1234',
-                termoAceito: false,
-                // Clona as permissões exatamente como o gerente deixou nos checkboxes
-                permissoes: JSON.parse(JSON.stringify(this.novasPermissoes)) 
+        togglePins() {
+            this.showPins = !this.showPins;
+        },
+        togglePerm(membro, perm) {
+            if (!membro.permissoes) membro.permissoes = {};
+            membro.permissoes[perm] = !membro.permissoes[perm];
+            this.sinc();
+        },
+        addMembro() {
+            if (!this.novo.nome) return;
+            const m = { 
+                id: Date.now().toString(), 
+                nome: this.novo.nome, 
+                cargo: this.novo.cargo, 
+                pin: '1234', 
+                precisaTrocarSenha: true,
+                permissoes: { 
+                    verMassa: true,
+                    verSacolao: true,
+                    verInsumos: true,
+                    verGelo: true,
+                    verLimpeza: true,
+                    verHistorico: true,
+                    apagarHistorico: false,
+                    admin: this.novo.cargo === 'Gerente' 
+                } 
             };
-
-            this.$root.equipe.push(novo);
-            this.novoNome = '';
-            
-            // Sincroniza imediatamente na nuvem com aviso de sucesso
-            this.salvarNuvem(true, 'Funcionário cadastrado e enviado para a nuvem automaticamente!');
+            this.$root.equipe.push(m);
+            this.sinc();
+            this.novo.nome = '';
+            Swal.fire('Cadastrado!', 'Funcionário adicionado com PIN 1234.', 'success');
         },
-
-        removerMembro(idx) {
-            Swal.fire({
-                title: 'Remover funcionário?', 
-                text: 'Ele perderá acesso ao sistema na mesma hora.', 
-                icon: 'warning', 
-                showCancelButton: true, 
-                confirmButtonColor: '#FF5252', 
-                cancelButtonColor: '#444',
-                confirmButtonText: 'Sim, Remover',
-                background: '#1E1E1E', 
-                color: '#FFF'
-            }).then((r) => {
-                if (r.isConfirmed) {
-                    this.$root.equipe.splice(idx, 1);
-                    // Salva na nuvem silenciosamente
-                    this.salvarNuvem(false); 
-                }
-            });
-        },
-        
-        resetarPin(membro) {
-            Swal.fire({
-                title: 'Resetar PIN?', 
-                text: 'A senha voltará a ser 1234 e ele terá de assinar o termo novamente.', 
-                icon: 'question', 
-                showCancelButton: true, 
-                confirmButtonColor: '#00E676', 
-                cancelButtonColor: '#444',
-                confirmButtonText: 'Sim, Resetar',
-                background: '#1E1E1E', 
-                color: '#FFF'
-            }).then((r) => {
-                if (r.isConfirmed) {
-                    membro.pin = '1234';
-                    membro.termoAceito = false;
-                    this.salvarNuvem(true, 'PIN resetado e sincronizado com a nuvem.');
-                }
-            });
-        },
-
-        toggleEditarPermissoes(id) {
-            this.editandoId = this.editandoId === id ? null : id;
-        },
-
-        salvarEdicao(membro) {
-            this.editandoId = null;
-            this.salvarNuvem(true, `Permissões de ${membro.nome} atualizadas.`);
-        },
-
-        aprovarReset(pedido, idx) {
-            const usuario = this.$root.equipe.find(u => u.id === pedido.idUsuario);
-            if (usuario) {
-                usuario.pin = '1234';
-                usuario.termoAceito = false;
+        aprovarReset(p, i) {
+            const uIdx = this.$root.equipe.findIndex(u => u.id === p.idUsuario);
+            if (uIdx !== -1) {
+                this.$root.equipe[uIdx].pin = '1234';
+                this.$root.equipe[uIdx].precisaTrocarSenha = true;
             }
-            this.$root.pedidosResetSenha.splice(idx, 1);
-            db.collection("configuracoes").doc("loja").set({ pedidosResetSenha: this.$root.pedidosResetSenha }, { merge: true });
-            this.salvarNuvem(true, 'Senha resetada para 1234.');
-        },
+            
+            // Remove do Mural de Avisos
+            this.$root.avisos = this.$root.avisos.filter(a => !(a.isResetRequest && a.idUsuario === p.idUsuario));
+            db.collection("configuracoes").doc("avisos").set({ lista: this.$root.avisos });
 
-        negarReset(idx) {
-            this.$root.pedidosResetSenha.splice(idx, 1);
-            db.collection("configuracoes").doc("loja").set({ pedidosResetSenha: this.$root.pedidosResetSenha }, { merge: true });
-            this.$root.salvarMemoriaLocal();
+            this.$root.pedidosResetSenha.splice(i, 1);
+            this.sinc();
+            Swal.fire('Resetado!', 'O PIN voltou para 1234.', 'success');
         },
-
-        // 🟢 A MÁGICA DA SINCRONIZAÇÃO INVISÍVEL
-        salvarNuvem(exibirAviso = false, mensagem = '') {
-            db.collection("configuracoes").doc("equipe").set({ lista: this.$root.equipe }, { merge: true })
-            .then(() => {
-                this.$root.salvarMemoriaLocal();
-                if (exibirAviso) {
-                    this.$root.vibrar(30);
-                    Swal.fire({
-                        icon: 'success', 
-                        title: 'Tudo Certo!', 
-                        text: mensagem,
-                        timer: 2000, 
-                        showConfirmButton: false, 
-                        background: '#1E1E1E', 
-                        color: '#FFF'
-                    });
+        negarReset(i) {
+            this.$root.pedidosResetSenha.splice(i, 1);
+            this.sinc();
+        },
+        removerMembro(i) {
+            Swal.fire({
+                title: 'Remover Funcionário?',
+                text: "Ele perderá acesso imediato ao sistema.",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#FF5252',
+                background: '#1E1E1E', color: '#FFF'
+            }).then(res => {
+                if (res.isConfirmed) {
+                    this.$root.equipe.splice(i, 1);
+                    this.sinc();
                 }
-            })
-            .catch(err => {
-                Swal.fire('Erro de Conexão', 'Problema na internet: ' + err.message, 'error');
             });
+        },
+        sinc() {
+            db.collection("configuracoes").doc("equipe").set({ lista: this.$root.equipe });
+            db.collection("configuracoes").doc("loja").set({ pedidosResetSenha: this.$root.pedidosResetSenha }, { merge: true });
         }
     },
     mounted() {
-        // Estilos para o formulário e checkboxes
-        if (!document.getElementById('css-equipe-v2')) {
-            const style = document.createElement('style'); 
-            style.id = 'css-equipe-v2';
+        if (!document.getElementById('css-equipe-gestao')) {
+            const style = document.createElement('style');
+            style.id = 'css-equipe-gestao';
             style.innerHTML = `
-                .label-form { color: #888; font-size: 0.8rem; font-weight: bold; margin-bottom: 5px; display: block; letter-spacing: 0.5px; }
-                .input-form { width: 100%; margin-bottom: 20px; padding: 15px; border-radius: 8px; border: 1px solid #444; background: #222; color: white; box-sizing: border-box; font-size: 1rem; outline: none; }
-                .input-form:focus { border-color: #FF5252; }
-                .checkbox-label { color: white; font-size: 0.9rem; display: flex; align-items: center; gap: 8px; cursor: pointer; }
-                .checkbox-label input[type="checkbox"] { transform: scale(1.3); cursor: pointer; accent-color: #00E676; }
+                .grid-permissoes { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 10px; }
+                .perm-item { 
+                    display: flex; 
+                    flex-direction: column; 
+                    align-items: center; 
+                    gap: 5px; 
+                    cursor: pointer;
+                    padding: 8px;
+                    border-radius: 8px;
+                    background: #222;
+                    transition: all 0.2s;
+                }
+                .perm-item i { font-size: 1.1rem; color: #444; }
+                .perm-item i.active { color: #00E676; }
+                .perm-item span { font-size: 0.6rem; color: #888; text-transform: uppercase; font-weight: bold; }
+                .btn-small { border: none; padding: 6px 12px; border-radius: 6px; font-size: 0.75rem; font-weight: bold; cursor: pointer; }
             `;
             document.head.appendChild(style);
         }
     }
 });
-// FIM DO ARQUIVO modulos/ajustes_equipe.js
+

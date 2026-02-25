@@ -1,71 +1,125 @@
-// INÍCIO DO ARQUIVO modulos/ajustes_rotas.js - v2.0.1
+/**
+ * Rotas v2.0.1
+ */
 Vue.component('tela-ajustes-rotas', {
     template: `
     <div class="container animate__animated animate__fadeInRight" v-if="$root.usuario" style="padding-bottom: 100px;">
-        
-        <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 25px;">
-            <button @click="$root.mudarTela('tela-ajustes')" style="background: none; border: none; color: #AAA; font-size: 1.5rem; cursor: pointer;">
-                <i class="fas fa-arrow-left"></i>
-            </button>
-            <h2 style="margin: 0; color: #9C27B0;"><i class="fas fa-route"></i> Gestão de Rotas</h2>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px;">
+            <h2 style="margin: 0; color: #9C27B0;"><i class="fas fa-route"></i> Rotas de Contagem</h2>
+            <button @click="$root.mudarTela('tela-ajustes')" style="background: none; border: none; color: #AAA; font-size: 1.5rem; cursor: pointer;"><i class="fas fa-arrow-left"></i></button>
         </div>
 
-        <div class="card" style="padding: 20px; border-top: 4px solid #9C27B0;">
-            <p style="color: #888; font-size: 0.85rem; margin-bottom: 20px; line-height: 1.4;">
-                Cadastre os locais da pizzaria (Ex: Geladeira 1, Estoque Seco) para organizar as contagens.
+        <div class="card" style="padding: 20px; border-top: 5px solid #9C27B0; margin-bottom: 25px;">
+            <p style="color: #888; font-size: 0.85rem; margin-bottom: 20px;">
+                Defina os locais físicos da pizzaria e a ordem em que a contagem de estoque deve ser feita.
             </p>
-            
-            <label style="color: #AAA; font-size: 0.8rem; font-weight: bold; display: block; margin-bottom: 8px;">NOME DA NOVA ROTA:</label>
-            <div style="display: flex; gap: 10px; margin-bottom: 25px;">
-                <input type="text" v-model="novaRota" @keyup.enter="addRota" placeholder="Ex: Congelador Vertical" style="flex: 1; padding: 12px; background: #2C2C2C; border: 1px solid #444; border-radius: 8px; color: white; outline: none; font-size: 1rem;">
-                <button @click="addRota" style="background: #9C27B0; color: white; border: none; border-radius: 8px; width: 55px; font-size: 1.2rem; cursor: pointer;">
-                    <i class="fas fa-plus"></i>
-                </button>
+            <div style="display: flex; gap: 10px;">
+                <input type="text" v-model="nova" placeholder="Ex: Freezer, Estoque Seco..." class="input-dark" @keyup.enter="add">
+                <button @click="add" class="btn" style="background: #9C27B0; color: white; width: 60px;"><i class="fas fa-plus"></i></button>
             </div>
-            
-            <div v-for="(rota, idx) in $root.rotasSalvas" :key="idx" class="animate__animated animate__fadeInUp" style="display: flex; justify-content: space-between; align-items: center; background: #1A1A1A; padding: 15px; border-radius: 8px; margin-bottom: 10px; border: 1px solid #333;">
-                <span style="color: white; font-weight: bold; font-size: 1rem;">{{ rota }}</span>
-                <button @click="removerRota(idx)" style="background: none; border: none; color: #FF5252; cursor: pointer; padding: 5px; font-size: 1.1rem;">
-                    <i class="fas fa-trash-alt"></i>
-                </button>
+        </div>
+
+        <div class="card" style="padding: 10px; background: transparent; border: none;">
+            <div v-for="(r, i) in $root.rotasSalvas" :key="i" class="item-rota animate__animated animate__fadeInUp" :style="{ animationDelay: (i * 0.05) + 's' }">
+                <div style="display: flex; flex-direction: column; gap: 5px;">
+                    <button @click="mover(i, -1)" :disabled="i === 0" class="btn-ordem"><i class="fas fa-chevron-up"></i></button>
+                    <button @click="mover(i, 1)" :disabled="i === $root.rotasSalvas.length - 1" class="btn-ordem"><i class="fas fa-chevron-down"></i></button>
+                </div>
+                
+                <div style="flex: 1; margin-left: 15px;">
+                    <span style="color: #666; font-size: 0.7rem; font-weight: bold; display: block;">POSIÇÃO {{ i + 1 }}</span>
+                    <strong style="color: white; font-size: 1.1rem;">{{ r }}</strong>
+                </div>
+
+                <button @click="rm(i)" class="btn-delete-rota"><i class="fas fa-trash"></i></button>
             </div>
-            
-            <div v-if="$root.rotasSalvas.length === 0" style="text-align: center; color: #555; padding: 20px;">
-                Nenhuma rota cadastrada.
-            </div>
+        </div>
+
+        <div v-if="$root.rotasSalvas.length === 0" style="text-align: center; padding: 40px; color: #444;">
+            <i class="fas fa-map-marked-alt" style="font-size: 3rem; margin-bottom: 15px; opacity: 0.2;"></i>
+            <p>Nenhuma rota configurada.</p>
         </div>
     </div>
     `,
-    data() { return { novaRota: '' } },
+    data() { return { nova: '' }; },
     methods: {
-        addRota() {
-            if(!this.novaRota.trim()) return;
-            this.$root.rotasSalvas.push(this.novaRota.trim());
-            this.salvar(); 
-            this.novaRota = ''; 
+        add() {
+            if (!this.nova.trim()) return;
+            this.$root.rotasSalvas.push(this.nova.trim());
+            this.sinc();
+            this.nova = '';
             this.$root.vibrar(20);
         },
-        removerRota(i) {
-            Swal.fire({ 
-                title: 'Remover Rota?', 
-                text: 'Isso apagará o local da lista.', 
-                icon: 'warning', 
-                showCancelButton: true, 
-                confirmButtonColor: '#FF5252', 
-                background: '#1E1E1E', 
-                color: '#FFF' 
-            }).then(r => {
-                if(r.isConfirmed) { 
-                    this.$root.rotasSalvas.splice(i,1); 
-                    this.salvar(); 
+        mover(index, direcao) {
+            const novaPos = index + direcao;
+            if (novaPos < 0 || novaPos >= this.$root.rotasSalvas.length) return;
+            
+            const item = this.$root.rotasSalvas.splice(index, 1)[0];
+            this.$root.rotasSalvas.splice(novaPos, 0, item);
+            this.sinc();
+            this.$root.vibrar(10);
+        },
+        rm(i) {
+            Swal.fire({
+                title: 'Remover Local?',
+                text: "Isso pode desorganizar a contagem dos produtos vinculados a este local.",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#FF5252',
+                background: '#1E1E1E', color: '#FFF'
+            }).then(res => {
+                if (res.isConfirmed) {
+                    this.$root.rotasSalvas.splice(i, 1);
+                    this.sinc();
                 }
             });
         },
-        salvar() {
+        sinc() {
             db.collection("configuracoes").doc("rotas").set({ lista: this.$root.rotasSalvas });
-            this.$root.registrarHistorico('Alteração', 'Rotas', 'Atualizou a lista de locais da loja');
-            this.$root.salvarMemoriaLocal();
+        }
+    },
+    mounted() {
+        if (!document.getElementById('css-rotas')) {
+            const style = document.createElement('style');
+            style.id = 'css-rotas';
+            style.innerHTML = `
+                .item-rota { 
+                    background: #1A1A1A; 
+                    padding: 15px; 
+                    border-radius: 12px; 
+                    margin-bottom: 10px; 
+                    display: flex; 
+                    align-items: center; 
+                    border: 1px solid #333;
+                }
+                .btn-ordem { 
+                    background: #222; 
+                    border: 1px solid #444; 
+                    color: #666; 
+                    width: 30px; 
+                    height: 25px; 
+                    border-radius: 4px; 
+                    cursor: pointer; 
+                    font-size: 0.7rem;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                }
+                .btn-ordem:disabled { opacity: 0.2; cursor: default; }
+                .btn-ordem:not(:disabled):active { background: #333; color: #9C27B0; }
+                .btn-delete-rota { 
+                    background: none; 
+                    border: none; 
+                    color: #444; 
+                    font-size: 1.1rem; 
+                    cursor: pointer; 
+                    padding: 10px;
+                    transition: color 0.2s;
+                }
+                .btn-delete-rota:hover { color: #FF5252; }
+            `;
+            document.head.appendChild(style);
         }
     }
 });
-// FIM DO ARQUIVO modulos/ajustes_rotas.js
+

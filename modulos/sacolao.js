@@ -1,85 +1,174 @@
-// INÍCIO DO ARQUIVO modulos/sacolao.js - v1.1.5
+/**
+ * Sacolão v2.6.0
+ * Gestão de vegetais e hortifrúti.
+ */
 Vue.component('tela-sacolao', {
     template: `
-    <div class="container animate__animated animate__fadeIn" v-if="$root.usuario" style="padding-bottom: 100px;">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-            <h2 style="margin: 0; color: #00C853;"><i class="fas fa-carrot"></i> Sacolão</h2>
-            <button @click="$root.mudarTela('tela-dashboard')" style="background: none; border: none; color: var(--text-sec); font-size: 1.5rem;"><i class="fas fa-arrow-left"></i></button>
-        </div>
-
-        <div class="card" style="padding: 15px; margin-bottom: 20px; border-left: 4px solid #00C853; background: rgba(0,200,83,0.05);">
-            <p style="margin:0; color:#EEE; font-size:0.85rem; line-height:1.4;"><i class="fas fa-robot"></i> <b>IA Artigiano:</b> Insira o estoque atual. Eu calcularei a falta baseada na meta da semana.</p>
-        </div>
-
-        <div v-for="p in produtosSacolao" :key="p.id" class="card" style="padding: 15px; margin-bottom: 12px;">
-            <div style="display: flex; justify-content: space-between; align-items: center;">
-                <div style="flex: 1;">
-                    <strong style="color: white; font-size: 1rem; display: block;">{{ p.nome }}</strong>
-                    <span style="color: #888; font-size: 0.75rem;">Meta: {{ p.estoqueIdeal }} {{ p.undContagem }}</span>
-                </div>
-                <div style="display: flex; align-items: center; gap: 8px;">
-                    <input type="number" inputmode="numeric" v-model.number="estoquesLoja[p.id]" @blur="salvarNuvem" placeholder="0" style="width: 70px; padding: 10px; background: #2C2C2C; border: 1px solid #444; border-radius: 8px; color: white; text-align: center; font-weight: bold;">
-                    <span style="color: #AAA; font-size: 0.8rem; width: 35px;">{{ p.undContagem }}</span>
-                </div>
-            </div>
-            <div v-if="precisaPedir(p)" style="margin-top: 10px; padding-top: 10px; border-top: 1px solid #333; color: #00E676; font-size: 0.85rem; font-weight: bold;">
-                <i class="fas fa-shopping-basket"></i> Pedir: {{ calcFalta(p) }} {{ p.undCompra }}
-            </div>
-        </div>
-
-        <div style="position: fixed; bottom: 20px; left: 0; right: 0; padding: 0 20px; max-width: 600px; margin: 0 auto;">
-            <button @click="gerarPedido" class="btn" style="background: #00C853; color: white; font-weight: bold; box-shadow: 0 4px 15px rgba(0,200,83,0.4); height: 55px;">
-                <i class="fab fa-whatsapp"></i> ENVIAR PEDIDO SACOLÃO
+    <div class="container animate__animated animate__fadeInRight" v-if="$root.usuario" style="padding-bottom: 100px;">
+        
+        <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 25px;">
+            <button @click="$root.mudarTela('tela-dashboard')" style="background: none; border: none; color: #AAA; font-size: 1.5rem; cursor: pointer;">
+                <i class="fas fa-arrow-left"></i>
             </button>
+            <h2 style="margin: 0; color: var(--cor-sucesso);"><i class="fas fa-carrot"></i> Sacolão</h2>
+        </div>
+
+        <div v-if="produtosSacolao.length === 0" class="card" style="padding: 30px; text-align: center;">
+            <i class="fas fa-leaf" style="font-size: 3rem; color: var(--cor-sucesso); margin-bottom: 15px;"></i>
+            <h3 style="color: white; margin-top: 0;">Nenhum vegetal cadastrado!</h3>
+            <button @click="$root.mudarTela('tela-ajustes-produtos')" class="btn" style="background: var(--cor-sucesso); color: white;">
+                IR PARA CADASTRO ERP
+            </button>
+        </div>
+
+        <div v-else>
+            <!-- IA Memória -->
+            <div v-if="sugestaoMemoria" class="animate__animated animate__fadeInDown" style="margin-bottom: 20px; background: rgba(255, 171, 0, 0.1); border: 1px solid var(--cor-primaria); padding: 15px; border-radius: 10px; display: flex; align-items: center; gap: 15px;">
+                <i class="fas fa-brain" style="color: var(--cor-primaria); font-size: 1.5rem;"></i>
+                <div style="flex: 1;">
+                    <strong style="color: var(--cor-primaria); display: block; font-size: 0.9rem;">IA MEMÓRIA:</strong>
+                    <span style="color: #CCC; font-size: 0.8rem;">Baseado no histórico, você costuma pedir estes itens hoje.</span>
+                </div>
+            </div>
+
+            <div v-for="grupo in produtosAgrupados" :key="grupo.rota">
+                <div v-if="grupo.rota" style="margin: 20px 0 10px 0; display: flex; align-items: center; gap: 10px;">
+                    <div style="height: 1px; flex: 1; background: #333;"></div>
+                    <span style="color: #9C27B0; font-size: 0.75rem; font-weight: 800; text-transform: uppercase; letter-spacing: 2px;">
+                        <i class="fas fa-map-marker-alt"></i> {{ grupo.rota }}
+                    </span>
+                    <div style="height: 1px; flex: 1; background: #333;"></div>
+                </div>
+
+                <div class="card" style="padding: 20px; border-top: 5px solid var(--cor-sucesso); margin-bottom: 20px;">
+                    <div v-for="prod in grupo.produtos" :key="prod.id + grupo.rota" class="item-estoque">
+                        <div style="flex: 1;">
+                            <strong style="color: white; font-size: 1.1rem; display: block;">{{ prod.nome }}</strong>
+                            <span style="color: #888; font-size: 0.8rem;">Meta: {{ prod.meta }} {{ prod.unidade }}</span>
+                        </div>
+                        <input type="number" v-model.number="contagens[prod.id + '_' + grupo.rota]" placeholder="0" class="input-estoque">
+                    </div>
+                </div>
+            </div>
+
+            <div v-if="pedidoCalculado.length > 0" class="animate__animated animate__fadeInUp" style="margin-top: 20px;">
+                <div class="card" style="padding: 20px; border: 1px dashed var(--cor-sucesso); background: rgba(0, 230, 118, 0.05);">
+                    <h4 style="color: var(--cor-sucesso); margin-top: 0;"><i class="fas fa-shopping-basket"></i> Lista de Compras:</h4>
+                    <ul style="color: white; padding-left: 20px; margin-bottom: 20px;">
+                        <li v-for="item in pedidoCalculado" :key="item.id">
+                            Pedir {{ item.quantidade }} {{ item.unidade }} de {{ item.nome }}
+                        </li>
+                    </ul>
+                    <button @click="enviarPedido" class="btn" style="background: #25D366; color: white;">
+                        <i class="fab fa-whatsapp"></i> ENVIAR PEDIDO AO FORNECEDOR
+                    </button>
+                </div>
+            </div>
+            
+            <div v-else-if="concluido" class="card" style="padding: 20px; text-align: center; border-color: var(--cor-sucesso);">
+                <i class="fas fa-check-circle" style="color: var(--cor-sucesso); font-size: 2rem; margin-bottom: 10px;"></i>
+                <h4 style="color: white; margin: 0;">Sacolão Completo!</h4>
+                <button @click="finalizarSemPedido" class="btn" style="background: var(--cor-sucesso); color: #121212; margin-top: 15px;">
+                    REGISTRAR CONTAGEM
+                </button>
+            </div>
         </div>
     </div>
     `,
-    data() {
-        return { estoquesLoja: {} };
-    },
+    data() { return { contagens: {} }; },
     computed: {
-        produtosSacolao() { 
-            return this.$root.bancoProdutos.filter(p => p.categoria === 'sacolao').sort((a,b) => a.nome.localeCompare(b.nome)); 
+        produtosSacolao() {
+            const lista = (this.$root.bancoProdutos || []).filter(p => p.categoria === 'Sacolão');
+            return this.$root.ordenarProdutosPorRota(lista);
+        },
+        produtosAgrupados() {
+            const grupos = [];
+            const produtos = this.produtosSacolao;
+            this.$root.rotasSalvas.forEach(rota => {
+                const prodsDaRota = produtos.filter(p => (p.rotas && p.rotas.includes(rota)) || p.rota === rota);
+                if (prodsDaRota.length > 0) grupos.push({ rota, produtos: prodsDaRota });
+            });
+            const semRota = produtos.filter(p => (!p.rotas || p.rotas.length === 0) && !p.rota);
+            if (semRota.length > 0) grupos.push({ rota: '', produtos: semRota });
+            return grupos;
+        },
+        sugestaoMemoria() {
+            const insights = window.IA_Memoria.analisar(this.$root);
+            return insights.find(i => i.id === 'memoria_Sacolão');
+        },
+        concluido() {
+            if (this.produtosSacolao.length === 0) return false;
+            return this.produtosSacolao.every(p => {
+                const rotasDoProd = (p.rotas && p.rotas.length > 0) ? p.rotas : [p.rota || ''];
+                return rotasDoProd.every(r => {
+                    const key = p.id + '_' + r;
+                    return this.contagens[key] !== undefined && this.contagens[key] !== '';
+                });
+            });
+        },
+        pedidoCalculado() {
+            let pedido = [];
+            const totais = {};
+            
+            Object.keys(this.contagens).forEach(key => {
+                const prodId = key.split('_')[0];
+                const valor = parseFloat(this.contagens[key]) || 0;
+                if (!totais[prodId]) totais[prodId] = 0;
+                totais[prodId] += valor;
+            });
+
+            this.produtosSacolao.forEach(p => {
+                const atual = totais[p.id] || 0;
+                const meta = parseFloat(p.meta) || 0;
+                
+                const rotasDoProd = (p.rotas && p.rotas.length > 0) ? p.rotas : [p.rota || ''];
+                const totalmenteContado = rotasDoProd.every(r => this.contagens[p.id + '_' + r] !== undefined);
+
+                if (totalmenteContado && atual < meta) {
+                    pedido.push({ id: p.id, nome: p.nome, quantidade: meta - atual, unidade: p.unidade });
+                }
+            });
+            return pedido;
         }
     },
     methods: {
-        precisaPedir(p) {
-            let atual = this.estoquesLoja[p.id] || 0;
-            return atual < p.estoqueIdeal;
-        },
-        calcFalta(p) {
-            let atual = this.estoquesLoja[p.id] || 0;
-            let falta = p.estoqueIdeal - atual;
-            return p.fator > 1 ? Math.ceil(falta / p.fator) : falta;
-        },
-        salvarNuvem() {
-            db.collection("operacao").doc("contagemSacolao").set({ 
-                estoques: this.estoquesLoja, 
-                user: this.$root.usuario.nome, 
-                ts: Date.now() 
-            }, { merge: true });
-            this.$root.salvarMemoriaLocal();
-        },
-        gerarPedido() {
-            this.$root.vibrar(30);
-            let txt = '';
-            this.produtosSacolao.forEach(p => {
-                if (this.precisaPedir(p)) {
-                    txt += `- ${this.calcFalta(p)} ${p.undCompra} de ${p.nome}\n`;
+        enviarPedido() {
+            let txt = "*PEDIDO DE SACOLÃO / HORTIFRÚTI*\n\n";
+            const agora = Date.now();
+            
+            this.pedidoCalculado.forEach(i => {
+                txt += `- ${i.quantidade} ${i.unidade} de ${i.nome}\n`;
+                
+                // 🧠 Alimenta a Memória da IA
+                if (!this.$root.memoriaOperacional.itens[i.nome]) {
+                    this.$root.memoriaOperacional.itens[i.nome] = { historico: [] };
                 }
+                this.$root.memoriaOperacional.itens[i.nome].historico.push({
+                    data: agora,
+                    qtd: i.quantidade,
+                    unidade: i.unidade
+                });
+                this.$root.memoriaOperacional.itens[i.nome].ultimaQtd = i.quantidade;
+                this.$root.memoriaOperacional.itens[i.nome].ultimoPedido = agora;
             });
-            if (!txt) {
-                Swal.fire({ icon: 'info', title: 'Estoque Cheio', text: 'Nada para pedir hoje!', background: '#1E1E1E', color: '#FFF' });
-                return;
-            }
-            this.$root.registrarHistorico('Sacolão', 'Pedido', 'Enviou lista para WhatsApp');
+            
             this.$root.enviarWhatsApp(txt);
+            this.$root.dataPedidoSacolao = new Date().toLocaleDateString('pt-BR');
+            this.$root.registrarHistorico('Pedido', 'Sacolão', `Enviado pedido com ${this.pedidoCalculado.length} itens.`);
+            
+            // Sincroniza memória
+            db.collection("operacao").doc("memoria").set(this.$root.memoriaOperacional);
+            
+            this.$root.salvarMemoriaLocal();
+            
+            Swal.fire({ icon: 'success', title: 'Pedido Enviado!', background: '#1E1E1E' })
+                .then(() => this.$root.mudarTela('tela-dashboard'));
+        },
+        finalizarSemPedido() {
+            this.$root.dataPedidoSacolao = new Date().toLocaleDateString('pt-BR');
+            this.$root.registrarHistorico('Contagem', 'Sacolão', 'Estoque conferido e completo.');
+            this.$root.salvarMemoriaLocal();
+            this.$root.mudarTela('tela-dashboard');
         }
-    },
-    mounted() {
-        db.collection("operacao").doc("contagemSacolao").onSnapshot((doc) => {
-            if (doc.exists) this.estoquesLoja = { ...doc.data().estoques };
-        });
     }
 });
-// FIM DO ARQUIVO modulos/sacolao.js

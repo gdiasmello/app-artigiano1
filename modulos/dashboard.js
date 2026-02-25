@@ -1,59 +1,108 @@
-// INÍCIO DO ARQUIVO modulos/dashboard.js - v2.0.3
+/**
+ * Dashboard v2.15.0
+ * Interface principal com controle de permissões e IA integrada.
+ */
 Vue.component('tela-dashboard', {
     template: `
     <div class="container animate__animated animate__fadeIn" v-if="$root.usuario" style="padding-bottom: 100px;">
         
+        <!-- Header -->
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:25px;">
             <div>
-                <h2 style="margin:0; color:white;">Olá, {{ $root.usuario.nome }} 👋</h2>
+                <h2 style="margin:0; color:white; text-transform: capitalize;">Olá, {{ $root.usuario.nome }} 👋</h2>
                 <p style="margin:5px 0 0 0; color:#AAA; font-size:0.85rem;">
-                    <i class="fas fa-temperature-high" style="color:#FFAB00;"></i> Londrina: {{ $root.clima.temperatura }}°C
+                    <i class="fas fa-user-tag" style="color:var(--cor-primaria);"></i> {{ $root.usuario.cargo }}
+                </p>
+                <p v-if="$root.clima.temperatura !== 'Off'" style="margin:2px 0 0 0; color:var(--cor-secundaria); font-size:0.8rem;">
+                    <i class="fas fa-temperature-high"></i> Londrina: {{ $root.clima.temperatura }}°C
                 </p>
             </div>
-            <button @click="$root.fazerLogout()" style="background:rgba(255,82,82,0.1); border:1px solid #FF5252; color:#FF5252; padding:10px 15px; border-radius:8px; font-weight:bold; cursor:pointer;">
+            <button @click="$root.fazerLogout()" style="background:rgba(255,82,82,0.1); border:1px solid var(--cor-erro); color:var(--cor-erro); padding:10px 15px; border-radius:8px; font-weight:bold;">
                 <i class="fas fa-sign-out-alt"></i> Sair
             </button>
         </div>
 
-        <div v-if="avisosFiltrados.length > 0" class="card animate__animated animate__fadeInDown" style="border-left:4px solid #FFAB00; padding:15px; margin-bottom:20px;">
-            <strong style="color:#FFAB00; display:block; margin-bottom:10px;"><i class="fas fa-bullhorn"></i> Mural de Avisos</strong>
-            
-            <div v-for="aviso in avisosFiltrados" :key="aviso.id" style="display:flex; justify-content:space-between; align-items:flex-start; background:#222; padding:10px; border-radius:8px; margin-bottom:8px; border:1px solid #333;" :style="aviso.urgente ? 'border-left:4px solid #FF5252; background:rgba(255,82,82,0.05);' : ''">
-                <div style="flex:1;">
-                    <span v-if="aviso.urgente" style="color:#FF5252; font-size:0.75rem; font-weight:bold; display:block; margin-bottom:5px; letter-spacing:1px;">
-                        <i class="fas fa-exclamation-triangle animate__animated animate__flash animate__infinite animate__slower"></i> AVISO URGENTE
-                    </span>
-                    <p style="color:#FFF; font-size:0.95rem; margin:0; line-height:1.4;">{{ aviso.texto }}</p>
-                </div>
-                <button v-if="$root.usuario.permissoes.admin || $root.usuario.permissoes.avisos" @click="apagarAvisoRapido(aviso.id)" style="background:none; border:none; color:#FF5252; font-size:1.1rem; cursor:pointer; padding:0 0 0 15px;">
-                    <i class="fas fa-times-circle"></i>
-                </button>
+        <!-- Alerta de Reset de Senha (Só Gerentes) -->
+        <div v-if="podeVerAjustes && $root.pedidosResetSenha.length > 0" 
+             @click="$root.mudarTela('tela-ajustes-equipe')" 
+             class="card animate__animated animate__pulse animate__infinite" 
+             style="background: var(--cor-erro); padding: 15px; margin-bottom: 20px; cursor: pointer; color: white; border: none;">
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <i class="fas fa-key"></i> 
+                <span>{{ $root.pedidosResetSenha.length }} pedido(s) de reset de PIN pendentes!</span>
             </div>
         </div>
 
-        <div style="display:grid; grid-template-columns:1fr 1fr; gap:15px;">
-            <button v-if="$root.usuario.permissoes.admin || $root.usuario.permissoes.producao" @click="$root.mudarTela('tela-massa')" class="card" style="padding:20px; text-align:center; border-bottom:4px solid var(--cor-primaria); cursor:pointer; transition:0.2s;">
-                <i class="fas fa-pizza-slice" style="font-size:2.5rem; color:var(--cor-primaria); margin-bottom:10px;"></i><h4 style="margin:0; color:white;">Produção</h4>
+        <!-- Mural de IA e Avisos -->
+        <div style="margin-bottom:25px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                <strong style="color:var(--cor-primaria); font-size: 0.9rem;">
+                    <i class="fas fa-bullhorn"></i> MURAL & INSIGHTS
+                </strong>
+                <button v-if="podeVerAjustes" @click="$root.mudarTela('tela-ajustes-avisos')" style="background: var(--cor-primaria); color: #121212; border: none; padding: 6px 12px; border-radius: 20px; font-size: 0.7rem; font-weight: 800; cursor: pointer; display: flex; align-items: center; gap: 5px; box-shadow: 0 4px 10px rgba(255, 171, 0, 0.2);">
+                    <i class="fas fa-plus-circle"></i> NOVO AVISO
+                </button>
+            </div>
+            
+            <div v-if="avisosConsolidados.length > 0" class="animate__animated animate__fadeInDown">
+                <div v-for="aviso in avisosConsolidados" 
+                     :key="aviso.id" 
+                     @click="navegarAviso(aviso)" 
+                     :style="getEstiloAviso(aviso)" 
+                     class="card-aviso">
+                    
+                    <div style="flex:1;">
+                        <div class="aviso-header">
+                            <i :class="['fas', aviso.icone || 'fa-info-circle']"></i>
+                            <span>{{ getTituloAviso(aviso) }}</span>
+                        </div>
+                        <p class="aviso-texto">{{ aviso.texto }}</p>
+                    </div>
+                    
+                    <i v-if="aviso.telaDestino" class="fas fa-chevron-right" style="opacity: 0.5;"></i>
+                </div>
+            </div>
+            <div v-else class="card" style="padding: 15px; text-align: center; background: rgba(255,255,255,0.02); border: 1px dashed #333;">
+                <span style="color: #555; font-size: 0.8rem;">Nenhum aviso ou insight no momento.</span>
+            </div>
+        </div>
+
+        <!-- Grid de Módulos (Permissões Dinâmicas) -->
+        <div class="grid-modulos">
+            <button v-if="podeVer('verMassa')" @click="$root.mudarTela('tela-massa')" class="card-modulo" style="border-bottom: 4px solid var(--cor-primaria);">
+                <i class="fas fa-pizza-slice" style="color:var(--cor-primaria);"></i>
+                <span>Produção</span>
             </button>
-            <button v-if="$root.usuario.permissoes.admin || $root.usuario.permissoes.pedidos" @click="$root.mudarTela('tela-sacolao')" class="card" style="padding:20px; text-align:center; border-bottom:4px solid #00C853; cursor:pointer; transition:0.2s;">
-                <i class="fas fa-carrot" style="font-size:2.5rem; color:#00C853; margin-bottom:10px;"></i><h4 style="margin:0; color:white;">Sacolão</h4>
+            
+            <button v-if="podeVer('verSacolao')" @click="$root.mudarTela('tela-sacolao')" class="card-modulo" style="border-bottom: 4px solid var(--cor-sucesso);">
+                <i class="fas fa-carrot" style="color:var(--cor-sucesso);"></i>
+                <span>Sacolão</span>
             </button>
-            <button v-if="$root.usuario.permissoes.admin || $root.usuario.permissoes.pedidos" @click="$root.mudarTela('tela-insumos')" class="card" style="padding:20px; text-align:center; border-bottom:4px solid #D50000; cursor:pointer; transition:0.2s;">
-                <i class="fas fa-box-open" style="font-size:2.5rem; color:#D50000; margin-bottom:10px;"></i><h4 style="margin:0; color:white;">Insumos</h4>
+            
+            <button v-if="podeVer('verInsumos')" @click="$root.mudarTela('tela-insumos')" class="card-modulo" style="border-bottom: 4px solid var(--cor-erro);">
+                <i class="fas fa-box-open" style="color:var(--cor-erro);"></i>
+                <span>Insumos</span>
             </button>
-            <button v-if="$root.usuario.permissoes.admin || $root.usuario.permissoes.pedidos" @click="$root.mudarTela('tela-gelo')" class="card" style="padding:20px; text-align:center; border-bottom:4px solid #00B0FF; cursor:pointer; transition:0.2s;">
-                <i class="fas fa-snowflake" style="font-size:2.5rem; color:#00B0FF; margin-bottom:10px;"></i><h4 style="margin:0; color:white;">Gelo</h4>
+            
+            <button v-if="podeVer('verInsumos')" @click="$root.mudarTela('tela-gelo')" class="card-modulo" style="border-bottom: 4px solid var(--cor-secundaria);">
+                <i class="fas fa-snowflake" style="color:var(--cor-secundaria);"></i>
+                <span>Gelo</span>
             </button>
-            <button v-if="$root.usuario.permissoes.admin || $root.usuario.permissoes.limpeza" @click="$root.mudarTela('tela-limpeza')" class="card" style="padding:20px; text-align:center; border-bottom:4px solid #2962FF; cursor:pointer; transition:0.2s;">
-                <i class="fas fa-broom" style="font-size:2.5rem; color:#2962FF; margin-bottom:10px;"></i><h4 style="margin:0; color:white;">Limpeza</h4>
+            
+            <button v-if="podeVer('verLimpeza')" @click="$root.mudarTela('tela-limpeza')" class="card-modulo" style="border-bottom: 4px solid #2962FF;">
+                <i class="fas fa-broom" style="color:#2962FF;"></i>
+                <span>Limpeza</span>
             </button>
-            <button v-if="$root.usuario.permissoes.admin || $root.usuario.permissoes.historico || $root.usuario.cargo === 'Gerente'" @click="$root.mudarTela('tela-historico')" class="card" style="padding:20px; text-align:center; border-bottom:4px solid #E0E0E0; cursor:pointer; transition:0.2s;">
-                <i class="fas fa-history" style="font-size:2.5rem; color:#E0E0E0; margin-bottom:10px;"></i><h4 style="margin:0; color:white;">Auditoria</h4>
+            
+            <button v-if="podeVer('verHistorico')" @click="$root.mudarTela('tela-historico')" class="card-modulo" style="border-bottom: 4px solid #E0E0E0;">
+                <i class="fas fa-history" style="color:#E0E0E0;"></i>
+                <span>Auditoria</span>
             </button>
         </div>
 
-        <div style="margin-top:20px;">
-            <button @click="$root.mudarTela('tela-ajustes')" class="btn" style="width:100%; background:#2C2C2C; color:white; border:1px solid #444; height:60px; font-size:1.1rem; display:flex; align-items:center; justify-content:center; gap:10px;">
+        <!-- Footer Actions -->
+        <div style="margin-top:25px;">
+            <button @click="$root.mudarTela('tela-ajustes')" class="btn" style="background:#2C2C2C; color:white; border:1px solid #444; height:60px;">
                 <i class="fas fa-cog"></i> Ajustes & Gestão
             </button>
         </div>
@@ -61,49 +110,166 @@ Vue.component('tela-dashboard', {
     </div>
     `,
     computed: {
-        avisosFiltrados() {
-            if (!this.$root.usuario || !this.$root.usuario.permissoes) return [];
-            return this.$root.avisos.filter(a => {
-                if (a.expiracao && Date.now() > a.expiracao) return false;
-                if (a.publico === 'Todos') return true;
-                if (this.$root.usuario.permissoes.admin) return true;
-                return a.publico === this.$root.usuario.cargo;
-            });
+        avisosConsolidados() {
+            const humanos = this.$root.avisos.filter(a => {
+                if (a.expiracao && a.expiracao !== 'perm' && Date.now() > a.expiracao) return false;
+                
+                const isParaTodos = a.publico === 'Todos';
+                const isParaMeuCargo = a.publico === this.$root.usuario.cargo;
+                const isParaMim = a.publico === `user_${this.$root.usuario.id}`;
+                const souAdmin = this.$root.usuario.permissoes?.admin;
+
+                return isParaTodos || isParaMeuCargo || isParaMim || souAdmin;
+            }).map(a => ({ ...a, origem: 'humano' }));
+            
+            const ia = window.MotorIA ? window.MotorIA.analisar(this.$root).map(a => ({ ...a, origem: 'ia' })) : [];
+            const checklists = window.IA_Checklist ? window.IA_Checklist.analisar(this.$root).map(a => ({ ...a, origem: 'checklist' })) : [];
+            
+            // Verificação de Sazonais (Apenas para Admin/Gerente)
+            let sazonais = [];
+            if (this.podeVerAjustes) {
+                const hoje = new Date().toISOString().split('T')[0];
+                sazonais = this.$root.bancoProdutos
+                    .filter(p => p.sazonal && p.validadeSazonal && p.validadeSazonal < hoje)
+                    .map(p => ({
+                        id: `sazonal_${p.nome}`,
+                        tipo: 'sazonal',
+                        origem: 'sistema',
+                        titulo: 'PRODUTO SAZONAL EXPIRADO',
+                        texto: `O prazo do produto "${p.nome}" (${p.contextoSazonal}) acabou. Ainda está sendo vendido?`,
+                        icone: 'fa-calendar-times',
+                        cor: '#FFAB00',
+                        acao: true, // Flag para indicar que tem interação
+                        produto: p
+                    }));
+            }
+
+            return [...sazonais, ...ia, ...checklists, ...humanos];
+        },
+        podeVerAjustes() {
+            return this.$root.usuario?.permissoes?.admin || this.$root.usuario?.cargo === 'Gerente';
         }
     },
     methods: {
-        apagarAvisoRapido(id) {
-            this.$root.vibrar(20);
-            Swal.fire({
-                title: 'Apagar este aviso?', icon: 'question', showCancelButton: true, confirmButtonColor: '#FF5252', confirmButtonText: 'Sim', cancelButtonText: 'Não', background: '#1E1E1E', color: '#FFF'
-            }).then((r) => {
-                if (r.isConfirmed) {
-                    this.$root.avisos = this.$root.avisos.filter(a => a.id !== id);
-                    db.collection("configuracoes").doc("avisos").set({ lista: this.$root.avisos }, { merge: true });
-                    this.$root.salvarMemoriaLocal();
-                    this.$root.registrarHistorico('Mural', 'Comunicação', 'Apagou um aviso rapidamente pelo Dashboard.');
-                }
-            });
+        podeVer(permissao) {
+            if (this.$root.usuario?.permissoes?.admin) return true;
+            return this.$root.usuario?.permissoes?.[permissao];
         },
-        verificarTutorialInicial() {
-            if (this.$root.precisaVerTutorial('tut_dashboard_v1')) {
-                setTimeout(() => {
-                    Swal.fire({
-                        title: 'Bem-vindo ao PiZZA Master!',
-                        // Aspas corrigidas aqui! Sem a barra invertida
-                        html: '<div style="text-align:left; font-size:0.9rem; color:#CCC; line-height:1.5;">Esta é a sua <b>Tela Principal (Dashboard)</b>.<br><br>Aqui você tem acesso a todos os setores da pizzaria organizados por cores. <br><br><b style="color:#00E676;">Dica Mágica:</b> O sistema grava automaticamente as suas contagens na nuvem!</div>',
-                        icon: 'info', confirmButtonText: 'Vamos lá!', confirmButtonColor: '#2962FF', background: '#1E1E1E', color: '#FFF'
-                    }).then(() => {
-                        this.$root.marcarTutorialVisto('tut_dashboard_v1');
-                    });
-                }, 800);
+        navegarAviso(aviso) {
+            if (aviso.tipo === 'sazonal') {
+                Swal.fire({
+                    title: 'Produto Sazonal Expirado',
+                    text: `O produto "${aviso.produto.nome}" ainda está sendo vendido?`,
+                    icon: 'question',
+                    showCancelButton: true,
+                    confirmButtonText: 'Sim, manter (+15 dias)',
+                    cancelButtonText: 'Não, remover produto',
+                    confirmButtonColor: '#00E676',
+                    cancelButtonColor: '#FF5252',
+                    background: '#1E1E1E', color: '#FFF'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        // Adicionar 15 dias à validade
+                        const novaData = new Date();
+                        novaData.setDate(novaData.getDate() + 15);
+                        aviso.produto.validadeSazonal = novaData.toISOString().split('T')[0];
+                        
+                        // Atualizar no banco
+                        const index = this.$root.bancoProdutos.findIndex(p => p.nome === aviso.produto.nome);
+                        if (index > -1) {
+                            this.$root.bancoProdutos[index] = aviso.produto;
+                            db.collection('configuracoes').doc('bancoProdutos').set({ lista: this.$root.bancoProdutos });
+                            Swal.fire('Atualizado!', 'Validade estendida por 15 dias.', 'success');
+                        }
+                    } else if (result.dismiss === Swal.DismissReason.cancel) {
+                        // Remover produto
+                        const index = this.$root.bancoProdutos.findIndex(p => p.nome === aviso.produto.nome);
+                        if (index > -1) {
+                            this.$root.bancoProdutos.splice(index, 1);
+                            db.collection('configuracoes').doc('bancoProdutos').set({ lista: this.$root.bancoProdutos });
+                            Swal.fire('Removido!', 'O produto foi excluído do estoque.', 'success');
+                        }
+                    }
+                });
+                return;
             }
+
+            // Remover aviso do mural ao clicar
+            if (aviso.origem === 'ia' && window.MotorIA) {
+                window.MotorIA.removerAviso(aviso.id);
+            } else if (aviso.origem === 'checklist' && window.IA_Checklist) {
+                window.IA_Checklist.removerAviso(aviso.id);
+            } else if (aviso.origem === 'humano') {
+                const index = this.$root.avisos.findIndex(a => a.id === aviso.id);
+                if (index > -1) {
+                    this.$root.avisos.splice(index, 1);
+                }
+            }
+
+            if (aviso.origem !== 'ia') {
+                if (aviso.dados) this.$root.dadosNavegacao = aviso.dados;
+                if (aviso.telaDestino) this.$root.mudarTela(aviso.telaDestino);
+            }
+
+        },
+        getTituloAviso(aviso) {
+            if (aviso.tipo === 'sazonal') return aviso.titulo;
+            if (aviso.origem === 'ia') {
+                const titulos = { 'festa': 'DIA ESPECIAL', 'gelo': 'CLIMA', 'urgente': 'ALERTA' };
+                return titulos[aviso.tipo] || 'DICA';
+            }
+            if (aviso.origem === 'checklist') return 'ROTINA OPERACIONAL';
+            return aviso.urgente ? 'COMUNICADO URGENTE' : 'AVISO DA EQUIPE';
+        },
+        getEstiloAviso(aviso) {
+            let cor = 'var(--cor-primaria)';
+            if (aviso.tipo === 'festa') cor = 'var(--cor-sucesso)';
+            if (aviso.tipo === 'gelo') cor = 'var(--cor-secundaria)';
+            if (aviso.origem === 'checklist') cor = '#00E676';
+            if (aviso.tipo === 'urgente' || aviso.urgente) cor = 'var(--cor-erro)';
+            
+            return {
+                borderLeft: `4px solid ${cor}`,
+                background: `linear-gradient(90deg, rgba(255,255,255,0.05) 0%, rgba(0,0,0,0) 100%)`,
+                cursor: aviso.telaDestino ? 'pointer' : 'default'
+            };
         }
     },
     mounted() {
-        if (this.$root.usuario) {
-            this.verificarTutorialInicial();
+        if (!document.getElementById('css-dashboard')) {
+            const style = document.createElement('style');
+            style.id = 'css-dashboard';
+            style.innerHTML = `
+                .grid-modulos { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+                .card-modulo { 
+                    background: var(--bg-card); 
+                    border: 1px solid #333; 
+                    border-radius: 12px; 
+                    padding: 20px; 
+                    display: flex; 
+                    flex-direction: column; 
+                    align-items: center; 
+                    gap: 10px; 
+                    cursor: pointer;
+                    transition: transform 0.2s;
+                }
+                .card-modulo:active { transform: scale(0.95); }
+                .card-modulo i { font-size: 2rem; }
+                .card-modulo span { color: white; font-weight: 600; font-size: 0.95rem; }
+                
+                .card-aviso { 
+                    background: #222; 
+                    border-radius: 10px; 
+                    padding: 15px; 
+                    margin-bottom: 10px; 
+                    display: flex; 
+                    align-items: center; 
+                    gap: 15px;
+                }
+                .aviso-header { display: flex; align-items: center; gap: 8px; font-size: 0.7rem; font-weight: 800; letter-spacing: 1px; margin-bottom: 5px; opacity: 0.8; }
+                .aviso-texto { color: white; font-size: 0.9rem; margin: 0; line-height: 1.4; }
+            `;
+            document.head.appendChild(style);
         }
     }
 });
-// FIM DO ARQUIVO modulos/dashboard.js
