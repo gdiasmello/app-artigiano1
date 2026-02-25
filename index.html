@@ -181,7 +181,14 @@ User Agent: ${userAgent}
         </script>
     </div>
 
-    <div id="app" v-cloak>
+    <div id="loading-debug" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; color: #0F0; font-family: monospace; padding: 20px; z-index: 9998; display: flex; flex-direction: column; justify-content: center; align-items: center;">
+        <i class="fas fa-circle-notch fa-spin" style="font-size: 3rem; margin-bottom: 20px;"></i>
+        <h2>INICIANDO SISTEMA...</h2>
+        <p id="status-loading">Carregando módulos...</p>
+        <button onclick="document.getElementById('loading-debug').style.display='none'" style="margin-top: 20px; padding: 10px; background: #333; color: white; border: 1px solid #555;">Ocultar Tela de Carregamento</button>
+    </div>
+
+    <div id="app">
         <!-- Componentes Dinâmicos -->
         <component :is="viewAtual"></component>
     </div>
@@ -203,7 +210,7 @@ User Agent: ${userAgent}
     <script src="/modulos/ia_memoria.js"></script>
     <script src="/modulos/ia_checklist.js"></script>
     <script src="/modulos/execucao_checklist.js"></script>
-    <script type="module" src="/modulos/ia_resolucao.js"></script>
+    <!-- <script type="module" src="/modulos/ia_resolucao.js"></script> -->
     <script src="/modulos/ia.js"></script> 
 
     <!-- Módulos de Interface -->
@@ -215,7 +222,7 @@ User Agent: ${userAgent}
     <script src="/modulos/gelo.js"></script>
     <script src="/modulos/limpeza.js"></script>
     <script src="/modulos/historico.js"></script>
-    <script type="module" src="/modulos/erros.js"></script>
+    <!-- <script type="module" src="/modulos/erros.js"></script> -->
     
     <!-- Módulos de Ajustes -->
     <script src="/modulos/ajustes.js"></script>

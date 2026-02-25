@@ -3,6 +3,11 @@
  * Focado em Resiliência e Sincronização em Tempo Real
  */
 
+// 0. DEBUG INICIAL
+console.log("Iniciando main.js...");
+const statusLoading = document.getElementById('status-loading');
+if (statusLoading) statusLoading.innerText = "Carregando Firebase...";
+
 // 1. CONFIGURAÇÃO FIREBASE (Firestore v8)
 const firebaseConfig = { 
     apiKey: "AIzaSyBL70gtkhjBvC9BiKvz5HBivH07JfRKuo4", 
@@ -221,6 +226,10 @@ const app = new Vue({
         }
      },
     mounted() {
+        console.log("Vue Montado com Sucesso!");
+        const loading = document.getElementById('loading-debug');
+        if (loading) loading.style.display = 'none';
+
         this.carregarMemoriaLocal();
         
         // Listeners Firestore (Real-time)
