@@ -196,7 +196,19 @@ User Agent: ${userAgent}
         <button onclick="if(navigator.serviceWorker) navigator.serviceWorker.getRegistrations().then(r => r.forEach(s => s.unregister())); localStorage.clear(); location.reload(true);" style="margin-top: 10px; padding: 10px; background: #FF5252; color: white; border: none; border-radius: 4px;">
             <i class="fas fa-sync"></i> Limpar Cache e Recarregar
         </button>
+        <p id="timeout-msg" style="color: #FF5252; margin-top: 20px; display: none;">O sistema está demorando para responder...</p>
     </div>
+
+    <script>
+        // Timeout de segurança: Se travar no loading por 10s, avisa o usuário
+        setTimeout(() => {
+            const loading = document.getElementById('loading-debug');
+            if (loading && loading.style.display !== 'none') {
+                document.getElementById('timeout-msg').style.display = 'block';
+                window.exibirErroFatal("TIMEOUT DE INICIALIZAÇÃO", "O sistema demorou muito para carregar.", "Verifique sua conexão ou limpe o cache.");
+            }
+        }, 10000);
+    </script>
 
     <div id="app">
         <!-- Componentes Dinâmicos -->
@@ -248,20 +260,28 @@ User Agent: ${userAgent}
     <script src="/modulos/ajustes_checklists.js"></script>
     <script src="/modulos/tutorial_system.js"></script>
     
-    <!-- Core -->
-    <script src="/main.js"></script>
+    <!-- Core com Cache Busting para forçar atualização -->
+    <script src="/main.js?v=5"></script>
 
     <!-- Registro do Service Worker (PWA) -->
     <script>
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
+                // Força atualização do SW
                 navigator.serviceWorker.register('/sw.js')
                     .then(registration => {
-                        console.log('Service Worker registrado com sucesso:', registration.scope);
+                        console.log('Service Worker registrado:', registration.scope);
+                        // Tenta atualizar imediatamente
+                        registration.update();
                     })
                     .catch(error => {
-                        console.log('Falha ao registrar Service Worker:', error);
+                        console.log('Falha ao registrar SW:', error);
                     });
+            });
+            
+            // Detecta nova versão e recarrega
+            navigator.serviceWorker.addEventListener('controllerchange', () => {
+                window.location.reload();
             });
         }
     </script>

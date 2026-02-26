@@ -4,17 +4,21 @@
  */
 
 // 0. DEBUG INICIAL E PROTEÇÃO
+// Atualiza status visualmente para debug
+if (document.getElementById('status-loading')) {
+    document.getElementById('status-loading').innerText = "Carregando Core...";
+    document.getElementById('status-loading').style.color = 'yellow';
+}
+
 try {
     // Expor API Key para módulos estáticos
     try {
+        // O Vite substitui process.env.GEMINI_API_KEY por uma string durante o build/dev.
+        // Se não substituir, vai dar ReferenceError (process not defined), que o catch pega.
         window.GEMINI_API_KEY = process.env.GEMINI_API_KEY;
     } catch (e) {
-        console.warn("process.env não disponível, tentando import.meta.env");
-        try {
-            window.GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
-        } catch (e2) {
-            console.warn("Nenhuma variável de ambiente encontrada para API Key");
-        }
+        console.warn("API Key não encontrada via process.env");
+        window.GEMINI_API_KEY = null;
     }
 
     if (typeof firebase === 'undefined') {
