@@ -136,6 +136,10 @@ User Agent: ${userAgent}
         };
 
         window.onerror = function(msg, url, line, col, error) {
+            if (msg === 'Script error.' && !url) {
+                window.exibirErroFatal("ERRO DE SCRIPT EXTERNO", "Falha ao carregar um script externo (Vue, Firebase, etc).", "Verifique sua conexão ou bloqueadores de anúncio.");
+                return true;
+            }
             window.exibirErroFatal("ERRO CRÍTICO (LOAD)", error || msg, `Linha: ${line}, Col: ${col}, URL: ${url}`);
             return false;
         };
@@ -194,10 +198,10 @@ User Agent: ${userAgent}
     </div>
 
     <!-- Firebase & Vue via CDN -->
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/vue@2.6.14/dist/vue.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js" crossorigin="anonymous"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vue@2.6.14/dist/vue.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11" crossorigin="anonymous"></script>
 
     <!-- Módulos de IA -->
     <script src="/modulos/ia_equipe.js"></script>
@@ -210,7 +214,7 @@ User Agent: ${userAgent}
     <script src="/modulos/ia_memoria.js"></script>
     <script src="/modulos/ia_checklist.js"></script>
     <script src="/modulos/execucao_checklist.js"></script>
-    <!-- <script type="module" src="/modulos/ia_resolucao.js"></script> -->
+    <script src="/modulos/ia_resolucao.js"></script>
     <script src="/modulos/ia.js"></script> 
 
     <!-- Módulos de Interface -->
@@ -222,7 +226,7 @@ User Agent: ${userAgent}
     <script src="/modulos/gelo.js"></script>
     <script src="/modulos/limpeza.js"></script>
     <script src="/modulos/historico.js"></script>
-    <!-- <script type="module" src="/modulos/erros.js"></script> -->
+    <script src="/modulos/erros.js"></script>
     
     <!-- Módulos de Ajustes -->
     <script src="/modulos/ajustes.js"></script>
@@ -239,25 +243,6 @@ User Agent: ${userAgent}
     <script src="/modulos/tutorial_system.js"></script>
     
     <!-- Core -->
-    <script>
-        // Verificação de Dependências Críticas
-        (function() {
-            const status = document.getElementById('status-loading');
-            if (!status) return;
-            
-            if (typeof Vue === 'undefined') {
-                status.innerText = "ERRO CRÍTICO: Vue.js não carregou!";
-                status.style.color = '#FF5252';
-                console.error("Vue.js missing");
-            } else if (typeof firebase === 'undefined') {
-                status.innerText = "ERRO CRÍTICO: Firebase não carregou!";
-                status.style.color = '#FF5252';
-                console.error("Firebase missing");
-            } else {
-                status.innerText = "Dependências OK. Iniciando App...";
-            }
-        })();
-    </script>
     <script src="/main.js"></script>
 
 </body>

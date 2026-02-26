@@ -5,9 +5,8 @@
 
 // 0. DEBUG INICIAL E PROTEÇÃO
 try {
-    console.log("Iniciando main.js...");
-    const statusLoading = document.getElementById('status-loading');
-    if (statusLoading) statusLoading.innerText = "Carregando Firebase...";
+    // Expor API Key para módulos estáticos
+    window.GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 
     if (typeof firebase === 'undefined') {
         throw new Error("Firebase não foi carregado. Verifique sua conexão ou bloqueadores de anúncio.");
@@ -47,6 +46,22 @@ Vue.config.errorHandler = (err, vm, info) => {
 // Não precisamos redefini-los aqui, pois eles já capturam tudo.
 
 // 3. INSTÂNCIA VUE PRINCIPAL
+// Fallback Components (Segurança)
+if (typeof Vue !== 'undefined') {
+    if (!Vue.options.components['tela-login']) {
+        console.warn("Módulo Login não carregou. Usando Fallback.");
+        Vue.component('tela-login', {
+            template: '<div style="color:white; padding:50px; text-align:center;"><h1>LOGIN FALLBACK</h1><p>Módulo de login falhou.</p><button @click="$root.mudarTela(\'tela-dashboard\')">ENTRAR FORÇADO</button></div>'
+        });
+    }
+    if (!Vue.options.components['tela-dashboard']) {
+        console.warn("Módulo Dashboard não carregou. Usando Fallback.");
+        Vue.component('tela-dashboard', {
+            template: '<div style="color:white; padding:50px; text-align:center;"><h1>DASHBOARD FALLBACK</h1><p>Módulo dashboard falhou.</p></div>'
+        });
+    }
+}
+
 const app = new Vue({
     el: '#app',
     data: {
@@ -234,7 +249,6 @@ const app = new Vue({
         }
      },
     mounted() {
-        console.log("Vue Montado com Sucesso!");
         const loading = document.getElementById('loading-debug');
         if (loading) loading.style.display = 'none';
 
