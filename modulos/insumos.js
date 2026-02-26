@@ -57,7 +57,13 @@ Vue.component('tela-insumos', {
                         <div style="flex: 1;">
                             <strong style="color: white; font-size: 1.1rem; display: block;">{{ prod.nome }}</strong>
                             <span style="color: #888; font-size: 0.8rem;">Meta: {{ calcularMetaAjustada(prod) }} {{ prod.unidade }}</span>
+                            <div v-if="observacoes[prod.id]" style="color: #FFD700; font-size: 0.8rem; font-style: italic; margin-top: 2px;">
+                                <i class="fas fa-comment"></i> {{ observacoes[prod.id] }}
+                            </div>
                         </div>
+                        <button @click="adicionarObs(prod.id)" style="background: none; border: none; color: #AAA; margin-right: 10px; cursor: pointer; padding: 10px;">
+                            <i class="fas fa-comment-medical"></i>
+                        </button>
                         <div style="text-align: right;">
                             <label style="color: #AAA; font-size: 0.7rem; display: block; margin-bottom: 5px;">Qtd. Atual</label>
                             <input type="number" v-model.number="contagens[prod.id + '_' + grupo.rota]" placeholder="0" class="input-estoque" style="width: 80px; text-align: center; font-size: 1.2rem; font-weight: bold; color: var(--cor-secundaria); background: #1A1A1A; border: 1px solid #333; border-radius: 5px; padding: 5px;">
@@ -102,7 +108,7 @@ Vue.component('tela-insumos', {
     </div>
     `,
     data() {
-        return { contagens: {}, busca: '' };
+        return { contagens: {}, busca: '', observacoes: {} };
     },
     computed: {
         isVespera() {
@@ -190,7 +196,13 @@ Vue.component('tela-insumos', {
                 const foiContado = Object.keys(this.contagens).some(k => k.startsWith(p.id + '_'));
 
                 if (foiContado && atual < metaAjustada) {
-                    pedido.push({ id: p.id, nome: p.nome, quantidade: metaAjustada - atual, unidade: p.unidade });
+                    pedido.push({ 
+                        id: p.id, 
+                        nome: p.nome, 
+                        quantidade: metaAjustada - atual, 
+                        unidade: p.unidade,
+                        obs: this.observacoes[p.id] || ''
+                    });
                 }
             });
             return pedido;
@@ -200,6 +212,19 @@ Vue.component('tela-insumos', {
         }
     },
     methods: {
+        adicionarObs(id) {
+            Swal.fire({
+                title: 'Adicionar Observação',
+                input: 'text',
+                inputValue: this.observacoes[id] || '',
+                showCancelButton: true,
+                background: '#1E1E1E', color: '#FFF'
+            }).then((res) => {
+                if (res.isConfirmed) {
+                    this.$set(this.observacoes, id, res.value);
+                }
+            });
+        },
         buscarItem() {
             if (!this.busca) return;
             
@@ -312,10 +337,13 @@ Vue.component('tela-insumos', {
                     const soNome = produtoOriginal && produtoOriginal.pedirSoNome;
 
                     if (soNome) {
-                        txt += `• ${i.nome}\n`;
+                        txt += `• ${i.nome}`;
                     } else {
-                        txt += `• ${i.nome}: *${i.quantidade} ${i.unidade}*\n`;
+                        txt += `• ${i.nome}: *${i.quantidade} ${i.unidade}*`;
                     }
+                    
+                    if (i.obs) txt += ` (*Obs:* ${i.obs})`;
+                    txt += `\n`;
                     
                     // 🧠 Alimenta a Memória da IA
                     if (!this.$root.memoriaOperacional.itens[i.nome]) {
@@ -335,7 +363,9 @@ Vue.component('tela-insumos', {
             if (this.itensLimpezaNoCarrinho.length > 0) {
                 txt += `*🧼 LIMPEZA E HIGIENE:*\n`;
                 this.itensLimpezaNoCarrinho.forEach(i => {
-                    txt += `• ${i.nome}: *${i.quantidade} ${i.unidade}*\n`;
+                    txt += `• ${i.nome}: *${i.quantidade} ${i.unidade}*`;
+                    if (i.obs) txt += ` (*Obs:* ${i.obs})`;
+                    txt += `\n`;
                     
                     // 🧠 Alimenta a Memória da IA
                     if (!this.$root.memoriaOperacional.itens[i.nome]) {

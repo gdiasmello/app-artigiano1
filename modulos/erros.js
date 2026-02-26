@@ -2,7 +2,7 @@
  * Tela de Intervenção IA v0.0.50
  * Bloqueia ações críticas detectadas pela IA.
  */
-import IA_Resolucao from './ia_resolucao.js';
+// import IA_Resolucao from './ia_resolucao.js'; // Removido: Usando global
 
 Vue.component('tela-erros', {
     template: `
@@ -72,7 +72,7 @@ Vue.component('tela-erros', {
             
             this.carregandoIA = true;
             try {
-                const res = await IA_Resolucao.resolverErro(this.config.contexto, this.$root);
+                const res = await window.IA_Resolucao.resolverErro(this.config.contexto, this.$root);
                 if (res) {
                     this.resolucao = res;
                 }

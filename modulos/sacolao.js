@@ -41,12 +41,18 @@ Vue.component('tela-sacolao', {
                 </div>
 
                 <div class="card" style="padding: 20px; border-top: 5px solid var(--cor-sucesso); margin-bottom: 20px;">
-                    <div v-for="prod in grupo.produtos" :key="prod.id + grupo.rota" class="item-estoque">
+                    <div v-for="prod in grupo.produtos" :key="prod.id + grupo.rota" class="item-estoque" style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 15px; border-bottom: 1px solid #333; padding-bottom: 10px;">
                         <div style="flex: 1;">
                             <strong style="color: white; font-size: 1.1rem; display: block;">{{ prod.nome }}</strong>
                             <span style="color: #888; font-size: 0.8rem;">Meta: {{ prod.meta }} {{ prod.unidade }}</span>
+                            <div v-if="observacoes[prod.id]" style="color: #FFD700; font-size: 0.8rem; font-style: italic; margin-top: 2px;">
+                                <i class="fas fa-comment"></i> {{ observacoes[prod.id] }}
+                            </div>
                         </div>
-                        <input type="number" v-model.number="contagens[prod.id + '_' + grupo.rota]" placeholder="0" class="input-estoque">
+                        <button @click="adicionarObs(prod.id)" style="background: none; border: none; color: #AAA; margin-right: 10px; cursor: pointer; padding: 10px;">
+                            <i class="fas fa-comment-medical"></i>
+                        </button>
+                        <input type="number" v-model.number="contagens[prod.id + '_' + grupo.rota]" placeholder="0" class="input-estoque" style="width: 80px; text-align: center; padding: 10px; border-radius: 8px; border: 1px solid #444; background: #222; color: white;">
                     </div>
                 </div>
             </div>
@@ -75,7 +81,7 @@ Vue.component('tela-sacolao', {
         </div>
     </div>
     `,
-    data() { return { contagens: {} }; },
+    data() { return { contagens: {}, observacoes: {} }; },
     computed: {
         produtosSacolao() {
             const lista = (this.$root.bancoProdutos || []).filter(p => p.categoria === 'Sacolão');
@@ -125,19 +131,40 @@ Vue.component('tela-sacolao', {
                 const totalmenteContado = rotasDoProd.every(r => this.contagens[p.id + '_' + r] !== undefined);
 
                 if (totalmenteContado && atual < meta) {
-                    pedido.push({ id: p.id, nome: p.nome, quantidade: meta - atual, unidade: p.unidade });
+                    pedido.push({ 
+                        id: p.id, 
+                        nome: p.nome, 
+                        quantidade: meta - atual, 
+                        unidade: p.unidade,
+                        obs: this.observacoes[p.id] || '' 
+                    });
                 }
             });
             return pedido;
         }
     },
     methods: {
+        adicionarObs(id) {
+            Swal.fire({
+                title: 'Adicionar Observação',
+                input: 'text',
+                inputValue: this.observacoes[id] || '',
+                showCancelButton: true,
+                background: '#1E1E1E', color: '#FFF'
+            }).then((res) => {
+                if (res.isConfirmed) {
+                    this.$set(this.observacoes, id, res.value);
+                }
+            });
+        },
         enviarPedido() {
             let txt = "*PEDIDO DE SACOLÃO / HORTIFRÚTI*\n\n";
             const agora = Date.now();
             
             this.pedidoCalculado.forEach(i => {
-                txt += `- ${i.quantidade} ${i.unidade} de ${i.nome}\n`;
+                txt += `- ${i.quantidade} ${i.unidade} de ${i.nome}`;
+                if (i.obs) txt += ` (*Obs:* ${i.obs})`;
+                txt += `\n`;
                 
                 // 🧠 Alimenta a Memória da IA
                 if (!this.$root.memoriaOperacional.itens[i.nome]) {
