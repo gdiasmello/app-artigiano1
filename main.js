@@ -6,7 +6,16 @@
 // 0. DEBUG INICIAL E PROTEÇÃO
 try {
     // Expor API Key para módulos estáticos
-    window.GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+    try {
+        window.GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+    } catch (e) {
+        console.warn("process.env não disponível, tentando import.meta.env");
+        try {
+            window.GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
+        } catch (e2) {
+            console.warn("Nenhuma variável de ambiente encontrada para API Key");
+        }
+    }
 
     if (typeof firebase === 'undefined') {
         throw new Error("Firebase não foi carregado. Verifique sua conexão ou bloqueadores de anúncio.");
